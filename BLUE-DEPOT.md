@@ -55,7 +55,7 @@ ChestButler is a design/source reference; its DLL is not a dependency. Registrat
 - The UI currently uses mouse controls with Escape to close. Controller navigation, draggable stacks and a placement-radius marker remain follow-up work.
 - A hung MUC request pauses this client's automation pending its response; it is not automatically refunded or retried. Test disconnects/ownership changes with a disposable world before any server release.
 - All clients and the server will need matching Blue Depot and the compatible MUC build. Current server remains vanilla.
-- Distribution is local-only. No Thunderstore release or automatic updater has been published. A future modpack/profile or launcher can distribute tested versions.
+- A signed Windows/Linux patcher is available through [GitHub Releases](https://github.com/jStimpert0430/scrubclub-patcher/releases/latest). See [patcher documentation](patcher/README.md). This is for local-world testing; the live server remains unchanged.
 
 Installer backups and installed-file manifests are under `artifacts/local-install-backups/`. The install script backs up overwritten files. To play vanilla again on native Linux, launch normally in Steam without the BepInEx wrapper, and use an unmodded world.
 
