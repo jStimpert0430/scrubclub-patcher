@@ -54,8 +54,8 @@ ChestButler is a design/source reference; its DLL is not a dependency. Registrat
 - Only loaded, accessible, stationary chests count. Sorting runs while an eligible owning player is nearby, not offline across unloaded world areas.
 - The UI currently uses mouse controls with Escape to close. Controller navigation, draggable stacks and a placement-radius marker remain follow-up work.
 - A hung MUC request pauses this client's automation pending its response; it is not automatically refunded or retried. Test disconnects/ownership changes with a disposable world before any server release.
-- All clients and the server will need matching Blue Depot and the compatible MUC build. Current server remains vanilla.
-- A signed Windows/Linux patcher is available through [GitHub Releases](https://github.com/jStimpert0430/scrubclub-patcher/releases/latest). See [patcher documentation](patcher/README.md). This is for local-world testing; the live server remains unchanged.
+- All clients and the server will need matching Blue Depot and the compatible MUC build. The scrubclub server runs this modpack.
+- A signed Windows/Linux patcher is available through [GitHub Releases](https://github.com/jStimpert0430/scrubclub-patcher/releases/latest). See [patcher documentation](patcher/README.md). Close Valheim and use Update before joining the server.
 
 Installer backups and installed-file manifests are under `artifacts/local-install-backups/`. The install script backs up overwritten files. To play vanilla again on native Linux, launch normally in Steam without the BepInEx wrapper, and use an unmodded world.
 
@@ -66,3 +66,9 @@ Replaced the standalone TMP-default-font overlay with Jötunn's Valheim font, wo
 ## Button states — 0.1.2
 
 Category buttons now have distinct colors (materials amber, weapons red, armor blue, food green, potions purple, ammunition gold, tools cyan, trophies orange, miscellaneous mauve), with a brighter selected state. Drop materials is green when eligible materials are present and grey/disabled otherwise; it also disables during transfers. Eligibility is shared with the bulk operation: material items outside the hotbar, unequipped, with a positive count and no pending slot transfer. This preserves the previous hotbar protection. Colors refresh as inventory contents change.
+
+## Crafting and trophy deposits — 0.1.3
+
+Crafting and upgrades count accessible nearby stationary chests, Blue Depot native storage and linked chests. Missing ingredients are transferred with owner confirmation before vanilla crafting consumes them. Ingredients need temporary player inventory space. Building gathers missing ingredients on the first attempt and requires another placement click. Recipe discovery and station requirements remain vanilla. Bulk Drop materials now includes trophies while preserving hotbar protection.
+
+Validation: 58 automated mod tests pass; local client startup and user playtest passed. Release 0.2.1 installer smoke tests pass on native Linux and Windows under Wine, including rejected invalid signatures and damaged payloads. Multiplayer concurrency and disconnect scenarios remain follow-up playtests.

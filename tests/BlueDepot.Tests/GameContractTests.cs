@@ -9,6 +9,35 @@ namespace BlueDepot.Tests;
 // This is a compile/ABI regression check, not a substitute for an in-game test.
 public class GameContractTests
 {
+    [Fact] public void CraftingHarmonyArgumentsAndReflectedSelectionStillMatchGame()
+    {
+        var root=Root();
+        var game=Environment.GetEnvironmentVariable("GameManaged")??"/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed";
+        using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(root,"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
+        using var valheim=AssemblyDefinition.ReadAssembly(Path.Combine(game,"assembly_valheim.dll"));
+        var patchNames=new[]{"CraftRequirementScope","BuildRequirementScope","ChestIngredientCount","RequirementDisplayScope","CraftFromChests","PreventConcurrentCraft","BuildFromChests"};
+        foreach(var name in patchNames)
+        {
+            var type=Assert.Single(plugin.MainModule.Types,t=>t.Name==name);
+            var patch=Assert.Single(type.CustomAttributes,a=>a.AttributeType.Name=="HarmonyPatch");
+            var target=(TypeReference)patch.ConstructorArguments.First(a=>a.Type.FullName=="System.Type").Value;
+            var targetType=Assert.Single(valheim.MainModule.Types,t=>t.FullName==target.FullName);
+            var methodName=(string)patch.ConstructorArguments.First(a=>a.Type.FullName=="System.String").Value;
+            foreach(var parameter in type.Methods.Where(m=>m.Name=="Prefix" || m.Name=="Postfix").SelectMany(m=>m.Parameters))
+            {
+                if(parameter.Name.StartsWith("___",StringComparison.Ordinal))
+                    Assert.Contains(targetType.Fields,f=>f.Name==parameter.Name.Substring(3) && f.FieldType.FullName==parameter.ParameterType.FullName);
+                else if(!parameter.Name.StartsWith("__",StringComparison.Ordinal))
+                    Assert.Contains(targetType.Methods.Where(m=>m.Name==methodName).SelectMany(m=>m.Parameters),p=>p.Name==parameter.Name && p.ParameterType.FullName==parameter.ParameterType.FullName);
+            }
+        }
+        var gui=Assert.Single(valheim.MainModule.Types,t=>t.Name=="InventoryGui");
+        foreach(var field in new[]{"m_selectedRecipe","m_selectedVariant","m_craftVariant","m_multiCrafting","m_craftRecipe","m_craftUpgradeItem"})
+            Assert.Contains(gui.Fields,f=>f.Name==field);
+        var pair=Assert.Single(gui.NestedTypes,t=>t.Name=="RecipeDataPair");
+        Assert.Contains(pair.Properties,p=>p.Name=="Recipe");
+        Assert.Contains(pair.Properties,p=>p.Name=="ItemData");
+    }
     static string Root()
     {
         var dir=new DirectoryInfo(AppContext.BaseDirectory);

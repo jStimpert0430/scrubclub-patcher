@@ -140,5 +140,5 @@ public static class TransferRules
 public static class BulkDropRules
 {
     public static bool Eligible(Category category, bool equipped, int inventoryRow, int count, bool blocked) =>
-        category == Category.Materials && !equipped && inventoryRow > 0 && count > 0 && !blocked;
+        (category == Category.Materials || category == Category.Trophies) && !equipped && inventoryRow > 0 && count > 0 && !blocked;
 }

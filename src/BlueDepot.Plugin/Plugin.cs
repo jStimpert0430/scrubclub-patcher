@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace BlueDepot;
 
-[BepInPlugin(Guid, "Blue Depot", "0.1.2")]
+[BepInPlugin(Guid, "Blue Depot", "0.1.3")]
 [BepInDependency(Jotunn.Main.ModGuid)]
 [BepInDependency("com.maxsch.valheim.MultiUserChest")]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.Patch)]
@@ -18,11 +18,13 @@ public sealed class Plugin : BaseUnityPlugin
     public const string Guid="scrubclub.bluedepot";
     internal const string Prefab="BlueDepot_Chest";
     internal static ConfigEntry<float> Radius;
+    internal static ConfigEntry<bool> CraftFromChests;
     internal static Plugin Instance;
     Harmony harmony;
     void Awake()
     {
         Instance=this;
+        CraftFromChests=Config.Bind("Crafting","Enabled",true,new ConfigDescription("Craft, upgrade and build using accessible nearby storage.",null,new ConfigurationManagerAttributes{IsAdminOnly=true}));
         Radius=Config.Bind("Storage","Radius",20f,new ConfigDescription("Storage radius in metres.",new AcceptableValueRange<float>(5,50),new ConfigurationManagerAttributes{IsAdminOnly=true}));
         harmony=new Harmony(Guid);harmony.PatchAll();
         PrefabManager.OnVanillaPrefabsAvailable+=Register;

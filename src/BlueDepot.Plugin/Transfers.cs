@@ -10,6 +10,8 @@ internal static class Transfers
     static readonly TransferGate gate=new TransferGate();
     internal static bool issuing;static float issuedAt;
     internal static string Status="";
+    internal static int ReplySerial;
+    internal static bool LastSuccess;
     internal static bool Busy
     {
         get{
@@ -33,10 +35,22 @@ internal static class Transfers
     }
     internal static void Reply(int id,bool success,int amount)
     {
-        if(issuing || gate.Complete(id))Status=success?$"Moved {amount} item(s).":"Transfer declined; inventory changed.";
+        if(issuing || gate.Complete(id)){ReplySerial++;LastSuccess=success && amount>0;Status=success?$"Moved {amount} item(s).":"Transfer declined; inventory changed.";}
+    }
+    internal static bool PullIngredient(Container source,ItemDrop.ItemData item,int amount)
+    {
+        if(Busy || !Storage.CraftingChests().Contains(source))return false;
+        var inv=Player.m_localPlayer.GetInventory();
+        if(InventoryBlock.Get(inv).IsAnySlotBlocked() || InventoryBlock.Get(source.GetInventory()).IsSlotBlocked(item.m_gridPos))return false;
+        var snapshot=new Chest("player",inv.GetWidth()*inv.GetHeight(),0,true,inv.GetAllItems().ConvertAll(i=>Storage.Item(i,inv)));
+        var target=Routing.Next(Storage.Item(item,source.GetInventory()),"chest",new[]{snapshot});
+        if(target==null)return false;
+        Issue(()=>ContainerHandler.RemoveItemFromChest(source,item,inv,Storage.Position(target.Slot,inv),Player.m_localPlayer.GetZDOID(),Math.Min(amount,target.Amount)));
+        return true;
     }
     internal static void Deposit(Container source,Container target,ItemDrop.ItemData item,Vector2i slot,int amount)
     {
+        if(Crafting.Busy)return;
         if(!Storage.CanAccess(target) || target.IsInUse())return;
         Inventory inv;
         if(source){if(!Storage.CanAccess(source) || !source.GetComponent<ZNetView>().IsOwner())return;inv=source.GetInventory();}
@@ -49,6 +63,7 @@ internal static class Transfers
     }
     internal static void Take(Container depot,Container source,ItemDrop.ItemData item)
     {
+        if(Crafting.Busy)return;
         if(!Storage.ValidSession(depot) || !Storage.CanAccess(source) ||
             Vector3.Distance(source.transform.position,depot.transform.position)>Plugin.Radius.Value)return;
         var inv=Player.m_localPlayer.GetInventory();

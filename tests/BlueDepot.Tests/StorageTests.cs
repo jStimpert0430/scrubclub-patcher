@@ -122,6 +122,11 @@ public class BulkDropTests
 {
     [Theory]
     [InlineData(Category.Materials,false,1,20,false,true)]
+    [InlineData(Category.Trophies,false,1,5,false,true)]
+    [InlineData(Category.Trophies,false,0,5,false,false)]
+    [InlineData(Category.Trophies,true,1,5,false,false)]
+    [InlineData(Category.Trophies,false,1,0,false,false)]
+    [InlineData(Category.Trophies,false,1,5,true,false)]
     [InlineData(Category.Materials,false,0,20,false,false)]
     [InlineData(Category.Materials,true,1,20,false,false)]
     [InlineData(Category.Materials,false,1,0,false,false)]

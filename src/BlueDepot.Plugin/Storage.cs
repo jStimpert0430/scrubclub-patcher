@@ -33,6 +33,18 @@ internal static class Storage
             Vector3.Distance(depot.transform.position,c.transform.position)<=Plugin.Radius.Value && CanAccess(c))
             .OrderBy(c=>Vector3.SqrMagnitude(c.transform.position-depot.transform.position)).ThenBy(Id,StringComparer.Ordinal).ToList();
     }
+    internal static List<Container> CraftingChests()
+    {
+        all.RemoveWhere(c=>!c);
+        var player=Player.m_localPlayer;
+        if(!player)return new List<Container>();
+        var direct=all.Where(c=>c.GetComponent<Piece>() && !c.IsInUse() &&
+            !c.GetComponentInParent<Incinerator>() && !c.GetComponentInParent<Ship>() && !c.GetComponentInParent<Vagon>() &&
+            Vector3.Distance(player.transform.position,c.transform.position)<=Plugin.Radius.Value && CanAccess(c)).ToList();
+        return direct.Concat(direct.Where(Plugin.IsDepot).SelectMany(Nearby)).Where(c=>!c.IsInUse())
+            .GroupBy(Id).Select(g=>g.First()).OrderBy(c=>Vector3.SqrMagnitude(c.transform.position-player.transform.position))
+            .ThenBy(Id,StringComparer.Ordinal).ToList();
+    }
     internal static Category CategoryOf(ItemDrop.ItemData i)
     {
         var s=i.m_shared;
@@ -70,7 +82,7 @@ internal sealed class DepotSorter:MonoBehaviour
     void Update()
     {
         if(Time.time<next)return;next=Time.time+1;
-        if(Transfers.Busy || !Storage.CanAccess(chest))return;
+        if(Transfers.Busy || Crafting.Busy || !Storage.CanAccess(chest))return;
         if(!chest.GetComponent<ZNetView>().IsOwner() || chest.IsInUse())return;
         // Only a nearby player's active area is simulated. No unattended global scans.
         if(Vector3.Distance(Player.m_localPlayer.transform.position,chest.transform.position)>Plugin.Radius.Value)return;
