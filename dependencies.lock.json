@@ -1,0 +1,22 @@
+{
+  "sdk": "8.0.425",
+  "references": {
+    "ChestButler": "efdc858551ce3cd20d603204f19fa58c86e97542",
+    "MultiUserChest": "018628d751ae7674b43ca7fc67e66ea03a5f90f7"
+  },
+  "packages": {
+    "BepInExPack_Valheim": {
+      "version": "5.4.2350",
+      "sha256": "37a91c000b4e88f2ed7a4bd7d812239852d2e36cbf0ff0a9f5faacfba46b105f"
+    },
+    "Jotunn": {
+      "version": "2.30.0",
+      "sha256": "f7f218ac3f97b27a7e65d62b5ebe7c29b93129bf3e56cf41b6870bef1ef161fd"
+    },
+    "MultiUserChest": {
+      "version": "0.6.1",
+      "sha256": "d12ce19bf48bbacb422fee1ea20d876ee03a4f986a68f0246e3711d7ce37213f"
+    }
+  },
+  "note": "MultiUserChest released binary is NOT shipped. Build vendored source as local compatibility fork 0.6.2."
+}
