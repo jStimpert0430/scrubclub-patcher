@@ -7,6 +7,8 @@
 - Linux self-contained ImGui window: rendered and closed cleanly.
 - Windows self-contained ImGui window under Wine 11.17: rendered and closed cleanly. Native GLFW/cimgui libraries must be distributed beside the executable; the packaging includes them.
 - Actual Windows ImGui buttons: Update installed the current signed public release into a disposable folder; Launch game started a harmless recording stub with the expected server address. No real game or server was changed by this test.
+- Published 0.2.0 Windows player archive: downloaded from GitHub, checksum matched, extracted with its native libraries and font, then tested under Wine. Update installed all 43 signed payload files including the character helper. Selecting a disposable character name in the dropdown and clicking Launch game passed its full name, Local source and the configured server to the recording stub. The fixture was removed afterward.
+- Signed 0.2.0 CLI regression smoke: installation, idempotent rerun, corrupt payload, invalid signature and wrong-platform rejection passed under Wine.
 - A real Windows Steam playtest and an in-game local/Cloud character handoff remain outstanding. Game-contract checks do not substitute for a playtest.
 
 ## Previous console patcher 0.1.2
