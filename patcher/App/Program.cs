@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Scrubclub.Patching;
 
+if (args.Length == 0 || args[0] == "--gui") return LauncherUi.Run(args.Skip(1).ToArray());
 bool interactive = args.Length == 0;
 try
 {

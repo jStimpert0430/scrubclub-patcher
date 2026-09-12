@@ -1,5 +1,16 @@
 # Validation — 2026-09-12
 
+## Launcher 0.2.0
+
+- Patcher/launcher regression suite: 39 passed. Covers the updater plus character enumeration, active save-source distinction, safe argument handling, launch prerequisites, and adding new mod DLLs/assets/configuration/patchers in a later release.
+- Blue Depot/game contract suite: 39 passed, including the character helper's hook methods and field types against the locally installed game.
+- Linux self-contained ImGui window: rendered and closed cleanly.
+- Windows self-contained ImGui window under Wine 11.17: rendered and closed cleanly. Native GLFW/cimgui libraries must be distributed beside the executable; the packaging includes them.
+- Actual Windows ImGui buttons: Update installed the current signed public release into a disposable folder; Launch game started a harmless recording stub with the expected server address. No real game or server was changed by this test.
+- A real Windows Steam playtest and an in-game local/Cloud character handoff remain outstanding. Game-contract checks do not substitute for a playtest.
+
+## Previous console patcher 0.1.2
+
 - .NET 8 patcher regression suite: 25 passed, 0 failed.
 - Windows x64 self-contained publish: successful, zero compiler warnings/errors.
 - Linux x64 self-contained publish: successful, zero compiler warnings/errors.

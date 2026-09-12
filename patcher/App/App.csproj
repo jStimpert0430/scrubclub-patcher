@@ -1,1 +1,22 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><OutputType>Exe</OutputType><AssemblyName>ScrubclubPatcher</AssemblyName><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><ProjectReference Include="../Core/Core.csproj"/><EmbeddedResource Include="release-public.pem" LogicalName="ScrubclubPatcher.release-public.pem"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework><OutputType>Exe</OutputType>
+    <OutputType Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win'))">WinExe</OutputType>
+    <AssemblyName>ScrubclubPatcher</AssemblyName><ImplicitUsings>enable</ImplicitUsings><AllowUnsafeBlocks>true</AllowUnsafeBlocks><Version>0.2.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Core/Core.csproj"/>
+    <EmbeddedResource Include="release-public.pem" LogicalName="ScrubclubPatcher.release-public.pem"/>
+    <Content Include="assets/Inter-Regular.ttf" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true"/>
+    <PackageReference Include="Silk.NET.Windowing" Version="2.23.0"/>
+    <PackageReference Include="Silk.NET.Input" Version="2.23.0"/>
+    <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="2.23.0"/>
+    <PackageReference Include="Ultz.Native.GLFW" Version="3.4.0" GeneratePathProperty="true"/>
+    <PackageReference Include="ImGui.NET" Version="1.90.8.1" GeneratePathProperty="true"/>
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <!-- Silk's native loader needs these alongside the executable in single-file publishes. -->
+    <Content Include="$(PkgUltz_Native_GLFW)/runtimes/$(RuntimeIdentifier)/native/*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true"/>
+    <Content Include="$(PkgImGui_NET)/runtimes/$(RuntimeIdentifier)/native/*" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true"/>
+  </ItemGroup>
+</Project>

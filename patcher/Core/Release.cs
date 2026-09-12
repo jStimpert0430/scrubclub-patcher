@@ -80,7 +80,7 @@ public static class Releases
 
 public static class Downloads
 {
-    public static async Task<byte[]> Get(string url,long limit,CancellationToken token=default)
+    public static async Task<byte[]> Get(string url,long limit,CancellationToken token=default,Action<long,long?>? progress=null)
     {
         using var handler=new HttpClientHandler{AllowAutoRedirect=false};using var client=new HttpClient(handler){Timeout=TimeSpan.FromMinutes(3)};
         var uri=Releases.Https(url);
@@ -94,7 +94,7 @@ public static class Downloads
             using var output=new MemoryStream();await using var input=await response.Content.ReadAsStreamAsync(token);
             var buffer=new byte[65536];int count;
             while((count=await input.ReadAsync(buffer,token))>0)
-            {if(output.Length+count>limit)throw new IOException("Download exceeded limit.");output.Write(buffer,0,count);}
+            {if(output.Length+count>limit)throw new IOException("Download exceeded limit.");output.Write(buffer,0,count);progress?.Invoke(output.Length,response.Content.Headers.ContentLength);}
             return output.ToArray();
         }
         throw new IOException("Too many redirects.");

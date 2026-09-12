@@ -6,3 +6,6 @@ reference/
 artifacts/
 TestResults/
 .signing/
+patcher/mod-files/common/
+patcher/mod-files/windows/
+patcher/mod-files/linux/

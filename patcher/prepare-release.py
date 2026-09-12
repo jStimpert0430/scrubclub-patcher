@@ -18,11 +18,12 @@ version = sys.argv[1]
 out = root / 'artifacts/patcher/release' / version
 if out.exists():
     raise SystemExit(f'{out} already exists. Move it aside before rebuilding the same release.')
-subprocess.run([sys.executable, str(root / 'patcher/stage-payloads.py')], check=True)
 dotnet = str(root / '.tools/dotnet/dotnet') if (root / '.tools/dotnet/dotnet').exists() else 'dotnet'
 env = dict(os.environ)
 env.setdefault('DOTNET_CLI_HOME', '/tmp/blue-depot-dotnet-home')
 env.setdefault('NUGET_PACKAGES', str(root / '.tools/nuget'))
+subprocess.run([dotnet, 'build', str(root / 'patcher/Bridge/Bridge.csproj'), '-c', 'Release'], env=env, check=True)
+subprocess.run([sys.executable, str(root / 'patcher/stage-payloads.py')], check=True)
 subprocess.run([dotnet, 'build', str(root / 'patcher/Publisher/Publisher.csproj'), '-c', 'Release'], env=env, check=True)
 out.mkdir(parents=True)
 for platform, rid in [('windows', 'win-x64'), ('linux', 'linux-x64')]:
@@ -42,6 +43,9 @@ for platform, rid in [('windows', 'win-x64'), ('linux', 'linux-x64')]:
     notice_root = Path(env['NUGET_PACKAGES']) / ('microsoft.netcore.app.runtime.' + rid) / runtime
     entries = [(binary, binary.name), (root / 'patcher/README.md', 'README.md'), (root / 'LICENSE', 'LICENSE.txt'),
                (notice_root / 'LICENSE.TXT', 'DOTNET-LICENSE.txt'), (notice_root / 'THIRD-PARTY-NOTICES.TXT', 'DOTNET-THIRD-PARTY-NOTICES.txt')]
+    # Include fonts and any native libraries that publish leaves outside its single-file bundle.
+    entries.extend((p, p.relative_to(binary.parent).as_posix()) for p in sorted(binary.parent.rglob('*')) if p.is_file() and p != binary and p.suffix != '.pdb')
+    entries.extend((p, 'licenses/' + p.name) for p in sorted((root / 'licenses').glob('*.txt')))
     if platform == 'windows':
         with zipfile.ZipFile(out / 'ScrubclubPatcher-windows-x64.zip', 'w', zipfile.ZIP_DEFLATED) as z:
             for path, name in entries:

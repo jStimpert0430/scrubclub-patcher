@@ -14,7 +14,7 @@ public static class Installer
     static string Internal(string root, string path) => Releases.Destination(root, Meta + "/" + path, true);
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
-    public static InstallResult Install(string root, Release release, byte[] payload, Action<int>? afterWrite = null)
+    public static InstallResult Install(string root, Release release, byte[] payload, Action<int>? afterWrite = null, Action<int,int>? progress = null)
     {
         Releases.Validate(release, release.Platform);
         root = Path.GetFullPath(root);
@@ -82,6 +82,7 @@ public static class Installer
                 }
                 else File.Delete(target);
                 afterWrite?.Invoke(i);
+                progress?.Invoke(i + 1, changed.Count);
             }
             AtomicWrite(statePath, JsonSerializer.SerializeToUtf8Bytes(new Installed(release.Version, owned.ToArray()), Json));
             // Renaming the journal directory is the commit point. Backups remain for manual restoration.

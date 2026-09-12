@@ -122,6 +122,21 @@ public sealed class PatcherTests : IDisposable
         Assert.Equal("v1", File.ReadAllText(Target())); Assert.False(File.Exists(Target("BepInEx/plugins/new.dll")));
         Assert.False(Directory.Exists(pending));
     }
+    [Fact] public void LaterReleaseCanAddUnrelatedModsAssetsAndPatchers()
+    {
+        var p = Package(); Installer.Install(root, p.Release, p.Payload);
+        var next = Package("1.1.0", ("BepInEx/plugins/test.dll", "v1", false),
+            ("BepInEx/plugins/FutureMod/NewFeature.dll", "new mod", false),
+            ("BepInEx/plugins/FutureMod/assets/models.bundle", "models", false),
+            ("BepInEx/config/FutureMod.cfg", "new default", true),
+            ("BepInEx/patchers/FuturePatcher.dll", "patcher", false));
+        Assert.Equal(4, Installer.Install(root, next.Release, next.Payload).Changed);
+        Assert.Equal("new mod", File.ReadAllText(Target("BepInEx/plugins/FutureMod/NewFeature.dll")));
+        Assert.Equal("models", File.ReadAllText(Target("BepInEx/plugins/FutureMod/assets/models.bundle")));
+        Assert.Equal("new default", File.ReadAllText(Target("BepInEx/config/FutureMod.cfg")));
+        Assert.Equal("patcher", File.ReadAllText(Target("BepInEx/patchers/FuturePatcher.dll")));
+        Assert.Equal("v1", File.ReadAllText(Target()));
+    }
     [Fact] public void ConcurrentInstallationIsRefused()
     {
         var p = Package(); Installer.Install(root, p.Release, p.Payload);

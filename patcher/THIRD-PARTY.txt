@@ -1,6 +1,7 @@
-Scrubclub mod bundle 0.1.2
+Scrubclub mod bundle 0.2.0
 
 Blue Depot 0.1.2: MIT, source included in this release repository.
+Scrubclub Launcher and its character selection helper 0.2.0: MIT, source in patcher/.
 ChestButler: MIT, design/source adaptations; attribution in ChestButler-MIT.txt.
 https://github.com/EladKarni/ChestButler (see dependencies.lock.json for source revision)
 MultiUserChest: MIT; our Valheim compatibility fork 0.6.2, source in vendor/MultiUserChest.
@@ -19,3 +20,6 @@ Players must own and install Valheim separately.
 
 The standalone patcher bundles the Microsoft .NET 8 runtime. Its MIT license and
 third-party notices are included alongside the executable in the player ZIP.
+GUI dependencies: Silk.NET 2.23.0 (MIT), ImGui.NET 1.90.8.1 (MIT), Dear ImGui
+(MIT), GLFW (zlib), and Inter (SIL Open Font License). License texts accompany
+the player archive. Graphics are drawn by Dear ImGui; no game art is included.

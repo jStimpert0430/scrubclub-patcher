@@ -1,25 +1,33 @@
-# Scrubclub Patcher
+# Scrubclub Launcher
 
-A small console patcher for the Steam edition of Valheim on Windows x64 and native Linux x64. The Windows executable includes its .NET runtime; players do not need Python, .NET, a mod manager, or administrator rights when their game directory is writable.
+A Dear ImGui launcher and signed updater for the Steam edition of Valheim on Windows x64 and native Linux x64. Both player packages include their .NET runtime, graphics libraries and font. Players do not need Python, .NET or a mod manager. Keep the extracted files together; do not move just the executable out of its folder.
 
 ## Players
 
 1. Download `ScrubclubPatcher-windows-x64.zip` from [Releases](https://github.com/jStimpert0430/scrubclub-patcher/releases/latest), then extract it.
 2. Save and close Valheim. Double-click `ScrubclubPatcher.exe`.
-3. Accept the detected Steam Valheim folder, or paste its path. Steam → Valheim → Manage → Browse local files opens the correct folder.
-4. Confirm the update. When it finishes, launch Valheim from Steam.
+3. Click **Update** at the bottom left. The adjacent progress bar reports downloading and installation. If needed, set the game folder under **Installation & connection**; Steam → Valheim → Manage → Browse local files opens the correct folder.
+4. Choose a character from the dropdown, or leave **Choose in game** selected. Click **Launch game**, with Steam running. **Join scrubclub** connects to the configured server; untick it to use the normal game menu for a local world.
 
 Run the same patcher again before playing whenever the server owner announces a mod update. It checks the current signed release and installs changed files. It does not run in the background, update Steam itself, or download mods during a server connection.
 
-The first bundle contains Blue Depot 0.1.2, our compatible MultiUserChest 0.6.2 fork, Jötunn 2.30.0, and BepInExPack 5.4.2350. The custom chest mod must also be installed on the server before using it there. Test in a local world first.
+Bundle 0.2.0 contains Blue Depot 0.1.2, our compatible MultiUserChest 0.6.2 fork, Jötunn 2.30.0, BepInExPack 5.4.2350, and the client-only Scrubclub character helper 0.2.0. Blue Depot and its dependencies must also be installed on the server before using the chest there. This launcher release does not deploy anything to the server. Test in a local world first.
 
-On Linux, extract `ScrubclubPatcher-linux-x64.tar.gz` and run `./ScrubclubPatcher`. Launch the modded game using `./start_game_bepinex.sh` from the Valheim directory. This payload targets native Linux Valheim, not the Windows game running in Proton.
+On Linux, extract `ScrubclubPatcher-linux-x64.tar.gz` and run `./ScrubclubPatcher`. The Launch game button uses the BepInEx wrapper automatically. This payload targets native Linux Valheim, not the Windows game running in Proton. OpenGL 3.3-capable drivers and a graphical desktop are required for the ImGui window.
+
+The character list reads local saves and the active Steam account's cached Cloud characters; backup files are excluded. It does not move or edit saves. Let Steam finish syncing before launch. If a selected character is unavailable in-game, the helper falls back to Valheim's character screen. The optional custom save directory is also passed to the game. Selection is applied once, through Valheim's existing menu/join flow, retaining EULA, privilege and password prompts.
+
+The server address is prefilled at the owner's request and publicly visible in source. It can be changed in **Installation & connection** if the home IP changes. No password is embedded. Launcher preferences are stored in the user's local application-data folder under `ScrubclubLauncher/settings.json`.
+
+## Future mods
+
+The launcher is not tied to Blue Depot's filenames. Its mod list and installer use the signed release manifest. Add future client plugins, dependencies, patchers, configuration and assets through [mod-files](mod-files/README.md), sign a higher bundle version and publish it. Players use the same Update button; a launcher rebuild is not needed for ordinary mod changes. Compatibility testing still matters, and mods requiring external installers or writes outside the approved mod folders need explicit integration.
 
 The Windows executable has no commercial Authenticode certificate. Windows may show an unknown-publisher/SmartScreen prompt. Obtain it from the release link above; the patcher's own release signature checks apply to its downloaded mod files, not to the initial executable.
 
 ## Update safety and hosting
 
-Downloads use GitHub Releases over HTTPS. There is no home-network download service, inbound port, Proxmox connection, server password, or GitHub token in the patcher. Release assets are public: anyone can download them, but only repository maintainers can publish them. Public downloads do not grant access to the game server or Proxmox.
+Downloads use GitHub Releases over HTTPS. There is no home-network download service, additional inbound port, Proxmox connection, server password, or GitHub token in the launcher. Release assets and the prefilled game-server address are public. Only repository maintainers can publish releases. Knowing the game address does not bypass its password or provide Proxmox credentials.
 
 The patcher verifies RSA-PSS/SHA-256 signatures using its embedded public key, then checks the archive checksum and every file's length and checksum before changing the installation. ZIP contents must match the signed file list exactly. Paths are confined to BepInEx, Doorstop libraries and the required root loader files; path traversal and symlink/junction targets are refused. It blocks downgrades below its recorded installed version. This is not a sandbox for the installed mods: only sign code you trust.
 
@@ -46,7 +54,7 @@ python3 smoke-test.py --windows
 python3 smoke-test.py --linux
 ```
 
-The CLI supports `--game-dir PATH --yes`, optional `--manifest-url HTTPS_URL`, and signed offline testing with `--manifest-file FILE --payload-file FILE`. There is no switch to disable signature checks. A `patcher-settings.json` beside the executable may override `windowsManifestUrl` / `linuxManifestUrl`, but cannot change the trusted signing key.
+The executable opens the GUI by default. The CLI remains available with `--game-dir PATH --yes`, optional `--manifest-url HTTPS_URL`, and signed offline testing with `--manifest-file FILE --payload-file FILE`. There is no switch to disable signature checks. A `patcher-settings.json` beside the executable can override the CLI's `windowsManifestUrl` / `linuxManifestUrl`, but cannot change the trusted signing key. The GUI uses the built-in release URL. `--gui --smoke` renders and closes a preview without updates or game launch. `--gui --game-dir PATH` uses an isolated folder selection without saving launcher preferences, for UI integration testing.
 
 ## Maintainers: prepare a release
 
