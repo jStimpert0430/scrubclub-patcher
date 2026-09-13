@@ -72,3 +72,23 @@ Category buttons now have distinct colors (materials amber, weapons red, armor b
 Crafting and upgrades count accessible nearby stationary chests, Blue Depot native storage and linked chests. Missing ingredients are transferred with owner confirmation before vanilla crafting consumes them. Ingredients need temporary player inventory space. Building gathers missing ingredients on the first attempt and requires another placement click. Recipe discovery and station requirements remain vanilla. Bulk Drop materials now includes trophies while preserving hotbar protection.
 
 Validation: 58 automated mod tests pass; local client startup and user playtest passed. Release 0.2.1 installer smoke tests pass on native Linux and Windows under Wine, including rejected invalid signatures and damaged payloads. Multiplayer concurrency and disconnect scenarios remain follow-up playtests.
+
+## Grid inventory and station supplies — 0.1.4
+
+The depot uses a scrolling native-style inventory grid with hover details, Ctrl-click
+transfers, Shift-click splitting and drag controls. All, Drop box and Internal have
+their own button row above category filters; the selected tab has a gold outline.
+Drop box uses the depot's existing native storage and sorts intake on close. Internal
+shows the same 100-slot physical inventory. Sort consolidates compatible stacks
+across accessible controlled chests; item lists sort by item ID within categories.
+
+Crafting refreshes chest resource counts after each craft, deferred building uses
+one click, and normal station interactions can fetch fuel/input from nearby storage.
+Existing prefab identity, storage dimensions and save format remain unchanged.
+
+Release 0.2.2 contains Blue Depot 0.1.4. Local user playtests and 98 automated tests
+pass; Linux and Windows-under-Wine updater smoke tests pass. multiusermaps is not
+included. Interrupted MultiUserChest transfers still have a known item-loss window
+between source removal and destination confirmation. This release does not resolve
+that inherited behavior; automated tests do not establish crash-safe multiplayer
+item conservation. Keep consistent world backups.

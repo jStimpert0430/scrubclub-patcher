@@ -12,7 +12,13 @@ namespace BlueDepot;
 internal static class Crafting
 {
     internal static int CountScope;
-    internal static bool Executing;
+    internal static readonly ExecutionWindow Execution=new ExecutionWindow();
+    internal static bool Executing=>Execution.Active;
+    internal static void RefreshRecipes(InventoryGui gui)
+    {
+        if(gui && Player.m_localPlayer && InventoryGui.IsVisible())
+            AccessTools.Method(typeof(InventoryGui),"UpdateCraftingPanel").Invoke(gui,new object[]{false});
+    }
     internal static bool Busy;
     internal static bool Enabled=>Plugin.CraftFromChests.Value && Player.m_localPlayer && !Player.m_localPlayer.IsDead();
     internal static int Count(string name,int quality,bool remote,bool matchWorldLevel=true)
@@ -122,9 +128,9 @@ static class RequirementDisplayScope
 [HarmonyPatch(typeof(InventoryGui),"DoCrafting")]
 static class CraftFromChests
 {
-    static bool Prefix(InventoryGui __instance,Player player,Recipe ___m_craftRecipe,ItemDrop.ItemData ___m_craftUpgradeItem,bool ___m_multiCrafting,out bool __state)
+    static bool Prefix(InventoryGui __instance,Player player,Recipe ___m_craftRecipe,ItemDrop.ItemData ___m_craftUpgradeItem,bool ___m_multiCrafting,out IDisposable __state)
     {
-        __state=false;
+        __state=null;
         if(!Crafting.Enabled || Crafting.Executing || !___m_craftRecipe)return true;
         if(Crafting.Busy || Transfers.Busy || InventoryBlock.Get(player.GetInventory()).IsAnySlotBlocked())return false;
         if(player.NoCostCheat() || ZoneSystem.instance.GetGlobalKey(GlobalKeys.NoCraftCost))return true;
@@ -132,7 +138,7 @@ static class CraftFromChests
         var station=player.GetCurrentCraftingStation();
         int quality=upgrade==null?1:upgrade.m_quality+1;
         var plan=Crafting.Plan(recipe.m_resources,quality,___m_multiCrafting?__instance.m_multiCraftAmount:1,recipe.m_requireOnlyOneIngredient,false);
-        if(plan==null || Crafting.Ready(plan)){Crafting.Executing=true;__state=true;return true;}
+        if(plan==null || Crafting.Ready(plan)){__state=Crafting.Execution.Enter(()=>Crafting.RefreshRecipes(__instance));return true;}
         var view=Traverse.Create(__instance);
         int variant=view.Field("m_craftVariant").GetValue<int>();
         int multiplier=___m_multiCrafting?__instance.m_multiCraftAmount:1;
@@ -147,10 +153,10 @@ static class CraftFromChests
         }
         Crafting.Begin(plan,()=>__instance && InventoryGui.IsVisible() && player.GetCurrentCraftingStation()==station &&
             SelectionMatches() && view.Field("m_craftRecipe").GetValue<Recipe>()==recipe && view.Field("m_craftUpgradeItem").GetValue<ItemDrop.ItemData>()==upgrade,
-            ()=>{Crafting.Executing=true;try{AccessTools.Method(typeof(InventoryGui),"DoCrafting").Invoke(__instance,new object[]{player});}finally{Crafting.Executing=false;}});
+            ()=>{using(Crafting.Execution.Enter(()=>Crafting.RefreshRecipes(__instance)))AccessTools.Method(typeof(InventoryGui),"DoCrafting").Invoke(__instance,new object[]{player});});
         return false;
     }
-    static void Finalizer(bool __state){if(__state)Crafting.Executing=false;}
+    static void Finalizer(IDisposable __state)=>__state?.Dispose();
 }
 [HarmonyPatch(typeof(InventoryGui),"OnCraftPressed")]
 static class PreventConcurrentCraft {static bool Prefix()=>!Crafting.Busy;}
@@ -164,8 +170,7 @@ static class BuildFromChests
         var plan=Crafting.Plan(piece.m_resources,0,1,false,true);
         if(Crafting.Ready(plan))return true;
         __result=false;
-        Crafting.Begin(plan,()=>__instance.GetSelectedPiece()==piece,
-            ()=>__instance.Message(MessageHud.MessageType.Center,"Ingredients ready. Place the piece again to build."));
+        DeferredBuild.Gather(__instance,piece,plan);
         return false;
     }
 }

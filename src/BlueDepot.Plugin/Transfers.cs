@@ -61,20 +61,60 @@ internal static class Transfers
         if(at!=null && Storage.Key(at)!=Storage.Key(item))return;
         Issue(()=>ContainerHandler.AddItemToChest(target,item,inv,slot,Player.m_localPlayer.GetZDOID(),amount));
     }
-    internal static void Take(Container depot,Container source,ItemDrop.ItemData item)
+    internal static bool Take(Container depot,Container source,ItemDrop.ItemData item,int amount=int.MaxValue,Vector2i? destination=null)
     {
-        if(Crafting.Busy)return;
+        if(Crafting.Busy || Busy || item==null || item.m_shared.m_questItem || amount<=0)return false;
         if(!Storage.ValidSession(depot) || !Storage.CanAccess(source) ||
-            Vector3.Distance(source.transform.position,depot.transform.position)>Plugin.Radius.Value)return;
+            (source!=depot && !Storage.Nearby(depot).Contains(source)))return false;
+        var sourceInventory=source.GetInventory();
+        if(!sourceInventory.ContainsItem(item) || InventoryBlock.Get(sourceInventory).IsSlotBlocked(item.m_gridPos))return false;
         var inv=Player.m_localPlayer.GetInventory();
-        // Explicit free/compatible slot ensures MUC will not overwrite unrelated player items.
-        var playerSnapshot=new Chest("player",inv.GetWidth()*inv.GetHeight(),0,true,inv.GetAllItems().ConvertAll(i=>Storage.Item(i,inv)));
-        var target=Routing.Next(Storage.Item(item,source.GetInventory()),"chest",new[]{playerSnapshot});
-        if(target==null){Status="Your inventory is full.";return;}
-        Issue(()=>ContainerHandler.RemoveItemFromChest(source,item,inv,Storage.Position(target.Slot,inv),Player.m_localPlayer.GetZDOID(),target.Amount));
+        Vector2i slot;int capacity;
+        if(destination.HasValue)
+        {
+            slot=destination.Value;
+            if(slot.x<0 || slot.y<0 || slot.x>=inv.GetWidth() || slot.y>=inv.GetHeight())return false;
+            var at=inv.GetItemAt(slot.x,slot.y);
+            if(at!=null && Storage.Key(at)!=Storage.Key(item)){Status="Choose an empty or compatible inventory slot.";return false;}
+            capacity=at==null?item.m_shared.m_maxStackSize:at.m_shared.m_maxStackSize-at.m_stack;
+        }
+        else
+        {
+            var playerSnapshot=new Chest("player",inv.GetWidth()*inv.GetHeight(),0,true,inv.GetAllItems().ConvertAll(i=>Storage.Item(i,inv)));
+            var target=Routing.Next(Storage.Item(item,sourceInventory),"chest",new[]{playerSnapshot});
+            if(target==null){Status="Your inventory is full.";return false;}
+            slot=Storage.Position(target.Slot,inv);capacity=target.Amount;
+        }
+        if(capacity<=0 || InventoryBlock.Get(inv).IsSlotBlocked(slot))return false;
+        int moved=GridRules.MoveAmount(amount,item.m_stack,capacity);
+        Issue(()=>ContainerHandler.RemoveItemFromChest(source,item,inv,slot,Player.m_localPlayer.GetZDOID(),moved));
+        return true;
     }
+    internal static bool MoveWithin(Container depot,Container source,ItemDrop.ItemData item,Vector2i slot,int amount,bool requireOpenSession=true)
+    {
+        if(Busy || Crafting.Busy || !(requireOpenSession?Storage.ValidSession(depot):Storage.CanAccess(depot)) || !Storage.CanAccess(source) ||
+            (source!=depot && !Storage.Nearby(depot).Contains(source)) || item.m_shared.m_questItem)return false;
+        var inv=source.GetInventory();
+        if(!inv.ContainsItem(item) || slot==item.m_gridPos || slot.x<0 || slot.y<0 || slot.x>=inv.GetWidth() || slot.y>=inv.GetHeight() ||
+            InventoryBlock.Get(inv).IsSlotBlocked(item.m_gridPos) || InventoryBlock.Get(inv).IsSlotBlocked(slot))return false;
+        var at=inv.GetItemAt(slot.x,slot.y);
+        if(at!=null && Storage.Key(at)!=Storage.Key(item))return false;
+        int moved=GridRules.MoveAmount(amount,item.m_stack,at==null?item.m_shared.m_maxStackSize:at.m_shared.m_maxStackSize-at.m_stack);
+        if(moved<=0)return false;
+        Issue(()=>
+        {
+            var request=new RequestMove(item,slot,moved,inv);
+            InventoryPreview.AddPackage(request);
+            MultiUserChest.Patches.GamePatches.InvokeRPC(source.GetComponent<ZNetView>(),MultiUserChest.Patches.ContainerPatch.ItemMoveRPC,request);
+            return request;
+        });
+        return true;
+    }
+
 }
 [HarmonyPatch(typeof(InventoryHandler),nameof(InventoryHandler.RPC_RequestItemAddResponse),typeof(Inventory),typeof(RequestChestAddResponse))]
 static class AddResponse {static void Postfix(RequestChestAddResponse response)=>Transfers.Reply(response.SourceID,response.Success,response.Amount);}
 [HarmonyPatch(typeof(InventoryHandler),nameof(InventoryHandler.RPC_RequestItemRemoveResponse),typeof(Inventory),typeof(RequestChestRemoveResponse))]
 static class RemoveResponse {static void Postfix(RequestChestRemoveResponse response)=>Transfers.Reply(response.SourceID,response.Success,response.Amount);}
+[HarmonyPatch(typeof(InventoryHandler),nameof(InventoryHandler.RPC_RequestItemMoveResponse),typeof(RequestMoveResponse))]
+static class MoveResponse {static void Postfix(RequestMoveResponse response)=>Transfers.Reply(response.SourceID,response.Success,response.Amount);}

@@ -15,6 +15,7 @@ internal static class Storage
     static readonly Func<Container,long,bool> checkAccess=AccessTools.MethodDelegate<Func<Container,long,bool>>(AccessTools.Method(typeof(Container),"CheckAccess"));
     internal static void Register(Container c){if(c)all.Add(c);}
     internal static void Unregister(Container c)=>all.Remove(c);
+    internal static Container Find(string id)=>all.FirstOrDefault(c=>c && c.GetComponent<ZNetView>() && c.GetComponent<ZNetView>().IsValid() && Id(c)==id);
     internal static string Id(Container c)=>c.GetComponent<ZNetView>().GetZDO().m_uid.ToString();
     internal static bool CanAccess(Container c)
     {
@@ -48,8 +49,37 @@ internal static class Storage
     internal static Category CategoryOf(ItemDrop.ItemData i)
     {
         var s=i.m_shared;
+        if(s.m_food>0 || s.m_foodStamina>0 || s.m_foodEitr>0 || s.m_itemType.ToString()=="Fish" || FoodIngredients.Contains(s.m_name))return Category.Food;
         return Categories.Classify(s.m_itemType.ToString(),s.m_food>0 || s.m_foodStamina>0 || s.m_foodEitr>0,
             s.m_itemType==ItemDrop.ItemData.ItemType.Consumable && s.m_consumeStatusEffect && s.m_food<=0 && s.m_foodStamina<=0 && s.m_foodEitr<=0);
+    }
+    static readonly HashSet<string> foodIngredients=new HashSet<string>();
+    static ObjectDB foodDatabase;static int recipeCount=-1;
+    static HashSet<string> FoodIngredients
+    {
+        get
+        {
+            var db=ObjectDB.instance;
+            if(db && (foodDatabase!=db || recipeCount!=db.m_recipes.Count))
+            {
+                foodDatabase=db;recipeCount=db.m_recipes.Count;foodIngredients.Clear();
+                foreach(var recipe in db.m_recipes)
+                {
+                    if(!recipe || !recipe.m_item)continue;
+                    var output=recipe.m_item.m_itemData.m_shared;
+                    if(output.m_food<=0 && output.m_foodStamina<=0 && output.m_foodEitr<=0)continue;
+                    foreach(var requirement in recipe.m_resources)
+                        if(requirement.m_resItem)foodIngredients.Add(requirement.m_resItem.m_itemData.m_shared.m_name);
+                }
+                if(ZNetScene.instance)foreach(var prefab in ZNetScene.instance.m_prefabs)
+                {
+                    var cooking=prefab.GetComponent<CookingStation>();
+                    if(cooking)foreach(var conversion in cooking.m_conversion)
+                        if(conversion.m_from)foodIngredients.Add(conversion.m_from.m_itemData.m_shared.m_name);
+                }
+            }
+            return foodIngredients;
+        }
     }
     internal static string Key(ItemDrop.ItemData i)
     {
@@ -62,7 +92,7 @@ internal static class Storage
     }
     internal static Stack Item(ItemDrop.ItemData i,Inventory inv)=>new Stack(
         (i.m_gridPos.y*inv.GetWidth()+i.m_gridPos.x).ToString(CultureInfo.InvariantCulture),Key(i),
-        Localization.instance.Localize(i.m_shared.m_name),CategoryOf(i),i.m_stack,i.m_shared.m_maxStackSize);
+        Localization.instance.Localize(i.m_shared.m_name),CategoryOf(i),i.m_stack,i.m_shared.m_maxStackSize,i.m_dropPrefab?i.m_dropPrefab.name:i.m_shared.m_name);
     internal static Chest Snapshot(Container c,Container depot)
     {
         var inv=c.GetInventory();
@@ -77,28 +107,52 @@ internal static class Storage
 
 internal sealed class DepotSorter:MonoBehaviour
 {
-    Container chest;float next;int cursor;
-    void Awake(){chest=GetComponent<Container>();}
+    const string QueueKey="BlueDepot.SortQueue";
+    const string SortRpc="BlueDepotSortIntake";
+    Container chest;ZNetView view;float next;
+    void Awake()
+    {
+        chest=GetComponent<Container>();view=GetComponent<ZNetView>();
+        view.Register<string>(SortRpc,Receive);
+    }
+    internal void Request(Dictionary<int,string> slots)
+    {
+        if(!view || !view.IsValid() || !view.HasOwner())return;
+        var data=BlueDepot.Core.IntakeQueue.Encode(slots);
+        if(view.IsOwner())Receive(0,data);else view.InvokeRPC(SortRpc,data);
+    }
+    void Receive(long sender,string data)
+    {
+        if(!view.IsOwner())return;
+        var queue=BlueDepot.Core.IntakeQueue.Decode(view.GetZDO().GetString(QueueKey,""));
+        foreach(var pair in BlueDepot.Core.IntakeQueue.Decode(data))
+        {
+            var inv=chest.GetInventory();var current=inv.GetItemAt(pair.Key%inv.GetWidth(),pair.Key/inv.GetWidth());
+            if(current!=null && Storage.Key(current)==pair.Value)queue[pair.Key]=pair.Value;
+        }
+        view.GetZDO().Set(QueueKey,BlueDepot.Core.IntakeQueue.Encode(queue));
+    }
     void Update()
     {
-        if(Time.time<next)return;next=Time.time+1;
-        if(Transfers.Busy || Crafting.Busy || !Storage.CanAccess(chest))return;
-        if(!chest.GetComponent<ZNetView>().IsOwner() || chest.IsInUse())return;
-        // Only a nearby player's active area is simulated. No unattended global scans.
+        if(Time.time<next)return;next=Time.time+.25f;
+        if(!view || !view.IsValid() || !view.IsOwner() || Transfers.Busy || Crafting.Busy || !Storage.CanAccess(chest) || chest.IsInUse())return;
         if(Vector3.Distance(Player.m_localPlayer.transform.position,chest.transform.position)>Plugin.Radius.Value)return;
-        var inv=chest.GetInventory();var items=inv.GetAllItems().ToArray();if(items.Length==0)return;
+        var queue=BlueDepot.Core.IntakeQueue.Decode(view.GetZDO().GetString(QueueKey,""));
+        if(queue.Count==0)return;
+        var inv=chest.GetInventory();
         var candidates=Storage.Nearby(chest).Where(c=>!c.IsInUse()).ToArray();
         var snapshots=candidates.Select(c=>Storage.Snapshot(c,chest)).ToArray();
-        // Rotate through at most eight source stacks per tick, so unroutable gear cannot starve materials.
-        for(int n=0;n<Math.Min(8,items.Length);n++)
+        foreach(var pair in queue.ToArray())
         {
-            var item=items[cursor++%items.Length];
+            var item=inv.GetItemAt(pair.Key%inv.GetWidth(),pair.Key/inv.GetWidth());
+            if(item==null || Storage.Key(item)!=pair.Value){queue.Remove(pair.Key);continue;}
             if(InventoryBlock.Get(inv).IsSlotBlocked(item.m_gridPos))continue;
             var move=Routing.Next(Storage.Item(item,inv),Storage.Id(chest),snapshots);
-            if(move==null)continue;
+            if(move==null){queue.Remove(pair.Key);continue;} // overflow remains safely in Internal
             var target=candidates.First(c=>Storage.Id(c)==move.ChestId);
             Transfers.Deposit(chest,target,item,Storage.Position(move.Slot,target.GetInventory()),move.Amount);
             break;
         }
+        view.GetZDO().Set(QueueKey,BlueDepot.Core.IntakeQueue.Encode(queue));
     }
 }

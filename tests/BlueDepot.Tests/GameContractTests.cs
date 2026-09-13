@@ -15,7 +15,9 @@ public class GameContractTests
         var game=Environment.GetEnvironmentVariable("GameManaged")??"/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed";
         using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(root,"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
         using var valheim=AssemblyDefinition.ReadAssembly(Path.Combine(game,"assembly_valheim.dll"));
-        var patchNames=new[]{"CraftRequirementScope","BuildRequirementScope","ChestIngredientCount","RequirementDisplayScope","CraftFromChests","PreventConcurrentCraft","BuildFromChests"};
+        var patchNames=new[]{"CraftRequirementScope","BuildRequirementScope","ChestIngredientCount","RequirementDisplayScope","CraftFromChests","PreventConcurrentCraft","BuildFromChests",
+            "ResumeDeferredBuild","SupplyFireplace","SupplySmelterFuel","SupplySmelterInput","SupplyCookingFuel","SupplyCookingInput",
+            "DepotPlayerClick","DepotPlayerRelease","DepotSplitAccepted","DepotSplitCancelled","DepotOutsideDrop"};
         foreach(var name in patchNames)
         {
             var type=Assert.Single(plugin.MainModule.Types,t=>t.Name==name);
@@ -26,7 +28,7 @@ public class GameContractTests
             foreach(var parameter in type.Methods.Where(m=>m.Name=="Prefix" || m.Name=="Postfix").SelectMany(m=>m.Parameters))
             {
                 if(parameter.Name.StartsWith("___",StringComparison.Ordinal))
-                    Assert.Contains(targetType.Fields,f=>f.Name==parameter.Name.Substring(3) && f.FieldType.FullName==parameter.ParameterType.FullName);
+                    Assert.Contains(targetType.Fields,f=>f.Name==parameter.Name.Substring(3) && f.FieldType.FullName==parameter.ParameterType.FullName.TrimEnd('&'));
                 else if(!parameter.Name.StartsWith("__",StringComparison.Ordinal))
                     Assert.Contains(targetType.Methods.Where(m=>m.Name==methodName).SelectMany(m=>m.Parameters),p=>p.Name==parameter.Name && p.ParameterType.FullName==parameter.ParameterType.FullName);
             }
@@ -37,6 +39,28 @@ public class GameContractTests
         var pair=Assert.Single(gui.NestedTypes,t=>t.Name=="RecipeDataPair");
         Assert.Contains(pair.Properties,p=>p.Name=="Recipe");
         Assert.Contains(pair.Properties,p=>p.Name=="ItemData");
+    }
+    [Fact] public void DeferredActionsReflectOnlyExistingGameMembers()
+    {
+        var game=Environment.GetEnvironmentVariable("GameManaged")??"/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed";
+        using var valheim=AssemblyDefinition.ReadAssembly(Path.Combine(game,"assembly_valheim.dll"));
+        foreach(var (type,name,result,args) in new[]{
+            ("InventoryGui","UpdateCraftingPanel","System.Void",new[]{"System.Boolean"}),
+            ("InventoryGui","ShowSplitDialog","System.Void",new[]{"ItemDrop/ItemData","Inventory"}),
+            ("InventoryGui","SetupDragItem","System.Void",new[]{"ItemDrop/ItemData","Inventory","System.Int32"}),
+            ("InventoryGrid","CreateItemTooltip","System.Void",new[]{"ItemDrop/ItemData","UITooltip"}),
+            ("Player","UpdatePlacementGhost","System.Void",new[]{"System.Boolean"}),
+            ("Humanoid","GetRightItem","ItemDrop/ItemData",Array.Empty<string>()),
+            ("Smelter","GetFuel","System.Single",Array.Empty<string>()),
+            ("Smelter","GetQueueSize","System.Int32",Array.Empty<string>()),
+            ("CookingStation","GetFuel","System.Single",Array.Empty<string>()),
+            ("CookingStation","GetFreeSlot","System.Int32",Array.Empty<string>()),
+            ("CookingStation","HaveDoneItem","System.Boolean",Array.Empty<string>()),
+            ("CookingStation","IsFireLit","System.Boolean",Array.Empty<string>())})
+            Assert.Contains(Assert.Single(valheim.MainModule.Types,t=>t.Name==type).Methods,
+                m=>m.Name==name && m.ReturnType.FullName==result && m.Parameters.Select(p=>p.ParameterType.FullName).SequenceEqual(args));
+        var player=Assert.Single(valheim.MainModule.Types,t=>t.Name=="Player");
+        Assert.Contains(player.Fields,f=>f.Name=="m_placementGhost" && f.FieldType.FullName=="UnityEngine.GameObject");
     }
     static string Root()
     {

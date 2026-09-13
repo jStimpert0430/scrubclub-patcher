@@ -38,6 +38,27 @@ static class WriteRemove {static void Postfix(RequestChestRemove __instance,ZPac
 static class ReadAdd {static void Postfix(RequestChestAdd __instance,ZPackage package)=>TransferGuards.Load(__instance,package);}
 [HarmonyPatch(typeof(RequestChestRemove),MethodType.Constructor,new[]{typeof(ZPackage)})]
 static class ReadRemove {static void Postfix(RequestChestRemove __instance,ZPackage package)=>TransferGuards.Load(__instance,package);}
+[HarmonyPatch(typeof(RequestMove),MethodType.Constructor,new[]{typeof(ItemDrop.ItemData),typeof(Vector2i),typeof(int),typeof(Inventory)})]
+static class StampMove {static void Postfix(RequestMove __instance,ItemDrop.ItemData itemToMove)=>TransferGuards.Stamp(__instance,itemToMove);}
+[HarmonyPatch(typeof(RequestMove),nameof(RequestMove.WriteToPackage))]
+static class WriteMove {static void Postfix(RequestMove __instance,ZPackage __result)=>TransferGuards.Write(__instance,__result);}
+[HarmonyPatch(typeof(RequestMove),MethodType.Constructor,new[]{typeof(ZPackage)})]
+static class ReadMove {static void Postfix(RequestMove __instance,ZPackage package)=>TransferGuards.Load(__instance,package);}
+[HarmonyPatch(typeof(ContainerRPCHandler),nameof(ContainerRPCHandler.RequestItemMove))]
+static class GuardMove
+{
+    static bool Prefix(Inventory inventory,RequestMove request,ref RequestMoveResponse __result)
+    {
+        if(!TransferGuards.Read(request,out var key))return true;
+        var current=inventory.GetItemAt(request.fromPos.x,request.fromPos.y);
+        var target=inventory.GetItemAt(request.toPos.x,request.toPos.y);
+        if(request.toPos.x>=0 && request.toPos.y>=0 && request.toPos.x<inventory.GetWidth() && request.toPos.y<inventory.GetHeight() &&
+            current!=null && request.dragAmount<=current.m_stack &&
+            TransferRules.CanRemove(key,Storage.Key(current),request.dragAmount) &&
+            TransferRules.CanDeposit(key,target==null?null:Storage.Key(target),request.dragAmount))return true;
+        __result=new RequestMoveResponse(request.RequestID,false,0);return false;
+    }
+}
 [HarmonyPatch(typeof(ContainerRPCHandler),nameof(ContainerRPCHandler.RequestItemAdd))]
 static class GuardAdd
 {

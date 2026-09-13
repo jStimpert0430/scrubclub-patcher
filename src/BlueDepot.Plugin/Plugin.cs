@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace BlueDepot;
 
-[BepInPlugin(Guid, "Blue Depot", "0.1.3")]
+[BepInPlugin(Guid, "Blue Depot", "0.1.4")]
 [BepInDependency(Jotunn.Main.ModGuid)]
 [BepInDependency("com.maxsch.valheim.MultiUserChest")]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.Patch)]
@@ -19,11 +19,13 @@ public sealed class Plugin : BaseUnityPlugin
     internal const string Prefab="BlueDepot_Chest";
     internal static ConfigEntry<float> Radius;
     internal static ConfigEntry<bool> CraftFromChests;
+    internal static ConfigEntry<bool> SupplyStations;
     internal static Plugin Instance;
     Harmony harmony;
     void Awake()
     {
         Instance=this;
+        SupplyStations=Config.Bind("Crafting","SupplyStations",true,new ConfigDescription("Use nearby storage for fires, processing stations and cooking station inputs when interacting.",null,new ConfigurationManagerAttributes{IsAdminOnly=true}));
         CraftFromChests=Config.Bind("Crafting","Enabled",true,new ConfigDescription("Craft, upgrade and build using accessible nearby storage.",null,new ConfigurationManagerAttributes{IsAdminOnly=true}));
         Radius=Config.Bind("Storage","Radius",20f,new ConfigDescription("Storage radius in metres.",new AcceptableValueRange<float>(5,50),new ConfigurationManagerAttributes{IsAdminOnly=true}));
         harmony=new Harmony(Guid);harmony.PatchAll();
@@ -60,6 +62,7 @@ static class ChestAwake
     static void Postfix(Container __instance)
     {
         Storage.Register(__instance);
+        if(__instance.GetComponent<ZNetView>() && !__instance.GetComponent<StorageConsolidator>())__instance.gameObject.AddComponent<StorageConsolidator>();
         if(Plugin.IsDepot(__instance) && !__instance.GetComponent<DepotSorter>())__instance.gameObject.AddComponent<DepotSorter>();
     }
 }

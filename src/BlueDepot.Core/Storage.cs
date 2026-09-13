@@ -31,13 +31,14 @@ public sealed class Stack
     public string Slot { get; }
     public string Key { get; }
     public string Name { get; }
+    public string ItemId { get; }
     public Category Category { get; }
     public int Count { get; }
     public int Maximum { get; }
-    public Stack(string slot, string key, string name, Category category, int count, int maximum)
+    public Stack(string slot, string key, string name, Category category, int count, int maximum, string? itemId = null)
     {
         if (count <= 0 || maximum <= 0 || count > maximum) throw new ArgumentOutOfRangeException(nameof(count));
-        Slot = slot; Key = key; Name = name; Category = category; Count = count; Maximum = maximum;
+        Slot = slot; Key = key; Name = name; Category = category; Count = count; Maximum = maximum; ItemId = itemId ?? key;
     }
 }
 
@@ -68,7 +69,8 @@ public sealed class StorageView
         Chests.SelectMany(c => c.Items.Select(i => (Chest: c, Item: i)))
             .Where(r => (!category.HasValue || r.Item.Category == category) &&
                 r.Item.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
-            .OrderBy(r => r.Item.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(r => r.Item.Category).ThenBy(r => r.Item.ItemId, StringComparer.Ordinal)
+            .ThenBy(r => r.Item.Key, StringComparer.Ordinal)
             .ThenBy(r => r.Chest.Id, StringComparer.Ordinal).ThenBy(r => r.Item.Slot, StringComparer.Ordinal);
 
     public StorageView(Chest depot, IEnumerable<Chest> nearby, double radius)
