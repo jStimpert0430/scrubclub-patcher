@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace BlueDepot;
 
-[BepInPlugin(Guid, "Blue Depot", "0.1.4")]
+[BepInPlugin(Guid, "Blue Depot", "0.1.5")]
 [BepInDependency(Jotunn.Main.ModGuid)]
 [BepInDependency("com.maxsch.valheim.MultiUserChest")]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.Patch)]
@@ -20,11 +20,13 @@ public sealed class Plugin : BaseUnityPlugin
     internal static ConfigEntry<float> Radius;
     internal static ConfigEntry<bool> CraftFromChests;
     internal static ConfigEntry<bool> SupplyStations;
+    internal static ConfigEntry<bool> WorkbenchNetwork;
     internal static Plugin Instance;
     Harmony harmony;
     void Awake()
     {
         Instance=this;
+        WorkbenchNetwork=Config.Bind("Crafting","WorkbenchNetwork",true,new ConfigDescription("Extend ingredient access through overlapping loaded workbench build areas. Chest and ward permissions still apply.",null,new ConfigurationManagerAttributes{IsAdminOnly=true}));
         SupplyStations=Config.Bind("Crafting","SupplyStations",true,new ConfigDescription("Use nearby storage for fires, processing stations and cooking station inputs when interacting.",null,new ConfigurationManagerAttributes{IsAdminOnly=true}));
         CraftFromChests=Config.Bind("Crafting","Enabled",true,new ConfigDescription("Craft, upgrade and build using accessible nearby storage.",null,new ConfigurationManagerAttributes{IsAdminOnly=true}));
         Radius=Config.Bind("Storage","Radius",20f,new ConfigDescription("Storage radius in metres.",new AcceptableValueRange<float>(5,50),new ConfigurationManagerAttributes{IsAdminOnly=true}));

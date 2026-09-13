@@ -33,6 +33,7 @@ public sealed class DeferredIntent
 
 public static class StationSupplyRules
 {
+    public static bool UseCarriedFirst(bool carriedOrExplicit,bool inventoryBlocked)=>carriedOrExplicit && !inventoryBlocked;
     public static bool ShouldFetch(bool valid, bool hasCapacity, bool carried, bool stored,
         bool explicitItem, bool busy) => valid && hasCapacity && !carried && stored && !explicitItem && !busy;
 }

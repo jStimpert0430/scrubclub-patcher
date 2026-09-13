@@ -39,9 +39,10 @@ internal static class Storage
         all.RemoveWhere(c=>!c);
         var player=Player.m_localPlayer;
         if(!player)return new List<Container>();
+        var network=WorkbenchReach.Connected(player.transform.position);
         var direct=all.Where(c=>c.GetComponent<Piece>() && !c.IsInUse() &&
             !c.GetComponentInParent<Incinerator>() && !c.GetComponentInParent<Ship>() && !c.GetComponentInParent<Vagon>() &&
-            Vector3.Distance(player.transform.position,c.transform.position)<=Plugin.Radius.Value && CanAccess(c)).ToList();
+            (Vector3.Distance(player.transform.position,c.transform.position)<=Plugin.Radius.Value || WorkbenchReach.Covers(network,c.transform.position)) && CanAccess(c)).ToList();
         return direct.Concat(direct.Where(Plugin.IsDepot).SelectMany(Nearby)).Where(c=>!c.IsInUse())
             .GroupBy(Id).Select(g=>g.First()).OrderBy(c=>Vector3.SqrMagnitude(c.transform.position-player.transform.position))
             .ThenBy(Id,StringComparer.Ordinal).ToList();

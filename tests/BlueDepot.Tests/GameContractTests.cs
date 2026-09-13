@@ -9,6 +9,34 @@ namespace BlueDepot.Tests;
 // This is a compile/ABI regression check, not a substitute for an in-game test.
 public class GameContractTests
 {
+    [Fact] public void StationCarriedPathPrecedesTransferGateAndRemoteCounting()
+    {
+        using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
+        var supply=plugin.MainModule.Types.Single(t=>t.Name=="StationSupplies").Methods.Single(m=>m.Name=="Supply");
+        var calls=supply.Body.Instructions.Where(i=>i.Operand is MethodReference).Select(i=>(MethodReference)i.Operand).ToList();
+        int carried=calls.FindIndex(m=>m.DeclaringType.Name=="StationSupplyRules" && m.Name=="UseCarriedFirst");
+        int busy=calls.FindIndex(m=>m.DeclaringType.Name=="Transfers" && m.Name=="get_Busy");
+        Assert.True(carried>=0 && busy>carried);
+        var issue=plugin.MainModule.Types.Single(t=>t.Name=="Transfers").Methods.Single(m=>m.Name=="Issue");
+        Assert.Contains(issue.Body.Instructions,i=>i.Operand is MethodReference m && m.DeclaringType.Name=="TransferGate" && m.Name=="EndDispatch");
+        Assert.DoesNotContain(issue.Body.Instructions,i=>i.Operand is MethodReference m && m.DeclaringType.Name=="TransferGate" && m.Name=="Begin");
+    }
+
+    [Fact] public void WorkbenchRangeUsesTheCurrentVanillaBuildRangeApi()
+    {
+        var game=Environment.GetEnvironmentVariable("GameManaged")??"/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed";
+        using var valheim=AssemblyDefinition.ReadAssembly(Path.Combine(game,"assembly_valheim.dll"));
+        var station=Assert.Single(valheim.MainModule.Types,t=>t.Name=="CraftingStation");
+        Assert.Contains(station.Methods,m=>m.Name=="GetStationBuildRange" && m.IsPublic && m.Parameters.Count==0 && m.ReturnType.FullName=="System.Single");
+        Assert.Contains(station.Properties,p=>p.Name=="Instances" && p.GetMethod.IsPublic && p.GetMethod.IsStatic);
+        using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
+        var storage=Assert.Single(plugin.MainModule.Types,t=>t.Name=="Storage");
+        var lookup=Assert.Single(storage.Methods,m=>m.Name=="CraftingChests");
+        Assert.Contains(lookup.Body.Instructions,i=>i.Operand is MethodReference m && m.DeclaringType.Name=="WorkbenchReach" && m.Name=="Connected");
+        var nearby=Assert.Single(storage.Methods,m=>m.Name=="Nearby");
+        Assert.DoesNotContain(nearby.Body.Instructions,i=>i.Operand is MethodReference m && m.DeclaringType.Name=="WorkbenchReach");
+    }
+
     [Fact] public void CraftingHarmonyArgumentsAndReflectedSelectionStillMatchGame()
     {
         var root=Root();

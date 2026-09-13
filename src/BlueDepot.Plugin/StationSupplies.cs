@@ -26,9 +26,14 @@ internal static class StationSupplies
         IEnumerable<ItemDrop> inputs,Func<bool> hasCapacity,Action resume,ref bool result)
     {
         if(Replaying || !Crafting.Enabled || !Plugin.SupplyStations.Value || user!=Player.m_localPlayer)return true;
-        if(Crafting.Busy || Transfers.Busy || InventoryBlock.Get(user.GetInventory()).IsAnySlotBlocked()){result=false;return false;}
+        var inventory=user.GetInventory();
         var allowed=inputs.Where(i=>i).ToArray();
-        bool carried=allowed.Any(i=>user.GetInventory().HaveItem(i.m_itemData.m_shared.m_name));
+        bool carried=allowed.Any(i=>inventory.HaveItem(i.m_itemData.m_shared.m_name));
+        bool inventoryBlocked=InventoryBlock.Get(inventory).IsAnySlotBlocked();
+        // A chest transfer pause must not block ordinary carried-fuel interactions.
+        // Preserve MUC's inventory locks: no bypass for slots involved in another transfer.
+        if(StationSupplyRules.UseCarriedFirst(carried || explicitItem!=null,inventoryBlocked))return true;
+        if(Crafting.Busy || Transfers.Busy || inventoryBlocked){result=false;return false;}
         var selected=allowed.FirstOrDefault(i=>Crafting.Count(i.m_itemData.m_shared.m_name,-1,true)>0);
         if(!StationSupplyRules.ShouldFetch(Valid(station,user),hasCapacity(),carried,selected,explicitItem!=null,false))return true;
         var plan=new[]{new Ingredient(selected.m_itemData.m_shared.m_name,1)};

@@ -92,3 +92,22 @@ included. Interrupted MultiUserChest transfers still have a known item-loss wind
 between source removal and destination confirmation. This release does not resolve
 that inherited behavior; automated tests do not establish crash-safe multiplayer
 item conservation. Keep consistent world backups.
+
+## Transfer lock correction and connected workbenches — 0.1.5
+
+Release 0.2.3 contains Blue Depot 0.1.5. Locally completed transfers no longer
+reopen as pending, which could freeze all depot interaction. Ordinary station
+interactions use carried fuel before checking chest-transfer busy state, while
+preserving inventory-slot locks. Genuine unconfirmed transfers still pause; this
+is not a fix for the separately documented interrupted cross-owner item-loss risk.
+
+Overlapping loaded workbench build areas now extend ingredient access to accessible
+chests in the same connected network as the player. Native upgraded build ranges
+are respected. Breaking an overlap, unloading a bench, or blocking ward access
+breaks that relay. Crafting, building, upgrades and station filling use this lookup;
+depot sorting/browsing ranges remain unchanged. Set the admin-only config option
+`[Crafting] WorkbenchNetwork = false` to retain direct-range behavior.
+
+124 regression tests pass. The previous UI was user-tested; the network extension
+and this transfer fix have automated validation but still need live gameplay
+confirmation. Existing prefab identity and 100-slot storage are unchanged.

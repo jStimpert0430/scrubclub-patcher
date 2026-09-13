@@ -126,9 +126,29 @@ public sealed class TransferGate
 {
     public int? Pending { get; private set; }
     public bool Uncertain { get; private set; }
-    public bool Busy => Pending.HasValue || Uncertain;
+    readonly HashSet<int> completedDuringDispatch=new HashSet<int>();
+    public bool Dispatching { get; private set; }
+    public bool Busy => Dispatching || Pending.HasValue || Uncertain;
+    public bool BeginDispatch()
+    {
+        if(Busy)return false;
+        completedDuringDispatch.Clear();Dispatching=true;return true;
+    }
+    public void EndDispatch(int? requestId)
+    {
+        Dispatching=false;
+        // Locally routed RPCs can reply before the send call returns its request.
+        // Never reopen an already-confirmed operation as pending.
+        if(requestId.HasValue && !completedDuringDispatch.Contains(requestId.Value))Begin(requestId.Value);
+        completedDuringDispatch.Clear();
+    }
     public bool Begin(int id) { if (Busy) return false; Pending = id; return true; }
-    public bool Complete(int id) { if (Pending != id) return false; Pending = null; Uncertain = false; return true; }
+    public bool Complete(int id)
+    {
+        if(Dispatching){completedDuringDispatch.Add(id);return true;}
+        if(Pending!=id)return false;
+        Pending=null;Uncertain=false;return true;
+    }
     public void Fault() { Uncertain = true; }
     public void Timeout() { if (Pending.HasValue) Uncertain = true; }
 }
