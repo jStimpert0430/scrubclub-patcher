@@ -24,6 +24,25 @@ for folder in ['src', 'tests', 'vendor', 'licenses', 'patcher', 'scripts']:
 for name in ['LICENSE', 'Directory.Build.props', 'dependencies.lock.json', '.gitignore']:
     shutil.copy2(root / name, out / name)
 shutil.copy2(root / 'README.md', out / 'BLUE-DEPOT.md')
+# Road Lights is developed beside Blue Depot, but exported beneath the repository
+# root. Keep the same explicit source-only rules and adapt local cache references.
+road = root.parent / 'RoadLights'
+if not road.exists():
+    road = root / 'RoadLights'
+for source in road.rglob('*'):
+    relative = source.relative_to(road)
+    if relative.parts[0] not in {'src', 'tests', 'scripts', 'README.md'}:
+        continue
+    if not source.is_file() or any(part in ignored for part in relative.parts):
+        continue
+    if source.suffix not in {'.cs', '.csproj', '.sh', '.md'}:
+        continue
+    target = out / 'RoadLights' / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    data = source.read_text().replace('../../../BlueDepot/.deps', '../../../.deps')
+    data = data.replace('$project_dir/../BlueDepot/', '$project_dir/../')
+    target.write_text(data)
+shutil.copy2(root / 'LICENSE', out / 'RoadLights/LICENSE')
 (out / 'README.md').write_text('''# Scrubclub Patcher & Blue Depot
 
 [Download the patcher](https://github.com/jStimpert0430/scrubclub-patcher/releases/latest)
@@ -32,7 +51,7 @@ Windows players: download **ScrubclubPatcher-windows-x64.zip**, extract everythi
 
 Linux players: use **ScrubclubPatcher-linux-x64.tar.gz**, then run `./ScrubclubPatcher`. The ImGui interface and Launch game button work on both platforms. Native Linux x64 only.
 
-The patcher installs Blue Depot, its compatible MultiUserChest fork, Jötunn and BepInEx. Downloads come from GitHub over HTTPS and are signature-checked before installation. Existing configuration is preserved; replaced files are backed up. No home-network hosting service or server credentials are involved.
+The patcher installs Blue Depot, Road Lights, the compatible MultiUserChest fork, Jötunn and BepInEx. Road Lights removes decorative-light fuel upkeep and station requirements, and adds optional free freestanding lights when using the hoe's Pathen tool. Downloads come from GitHub over HTTPS and are signature-checked before installation. Existing configuration is preserved; replaced files are backed up. No home-network hosting service or server credentials are involved.
 
 This is an initial test release. Automated tests cover installation and failures; the Windows executable has been exercised under Wine, not yet on a real Windows PC. The patcher does not deploy mods to a game server. Test the mod in a local world before server rollout.
 
