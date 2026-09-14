@@ -50,6 +50,9 @@ internal static class Storage
     internal static Category CategoryOf(ItemDrop.ItemData i)
     {
         var s=i.m_shared;
+        // Some trophies are also ingredients. Their trophy identity takes
+        // precedence over inferred food-ingredient membership.
+        if(Categories.IsTrophy(s.m_itemType.ToString(),i.m_dropPrefab?i.m_dropPrefab.name:null))return Category.Trophies;
         if(s.m_food>0 || s.m_foodStamina>0 || s.m_foodEitr>0 || s.m_itemType.ToString()=="Fish" || FoodIngredients.Contains(s.m_name))return Category.Food;
         return Categories.Classify(s.m_itemType.ToString(),s.m_food>0 || s.m_foodStamina>0 || s.m_foodEitr>0,
             s.m_itemType==ItemDrop.ItemData.ItemType.Consumable && s.m_consumeStatusEffect && s.m_food<=0 && s.m_foodStamina<=0 && s.m_foodEitr<=0);

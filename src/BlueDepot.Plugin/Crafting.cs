@@ -51,13 +51,13 @@ internal static class Crafting
         return CraftingPlan.Select(alternatives,(n,q)=>Count(n,q,true));
     }
     internal static bool Ready(Ingredient[] plan)=>plan!=null && plan.All(i=>CraftingPlan.Missing(i,(n,q)=>Count(n,q,false))==0);
-    internal static void Begin(Ingredient[] plan,Func<bool> valid,Action completed)
+    internal static void Begin(Ingredient[] plan,Func<bool> valid,Action completed,Func<bool> supplied=null)
     {
         if(Busy || Transfers.Busy || plan==null)return;
         Busy=true;
-        Plugin.Instance.StartCoroutine(Pull(plan,valid,completed));
+        Plugin.Instance.StartCoroutine(Pull(plan,valid,completed,supplied));
     }
-    static IEnumerator Pull(Ingredient[] plan,Func<bool> valid,Action completed)
+    static IEnumerator Pull(Ingredient[] plan,Func<bool> valid,Action completed,Func<bool> supplied)
     {
         var player=Player.m_localPlayer;
         var origin=player.transform.position;
@@ -67,12 +67,14 @@ internal static class Crafting
             // Let the triggering vanilla UI update finish before local-owner callbacks.
             yield return null;
             if(!Valid())yield break;
+            if(supplied?.Invoke()==true){completed();yield break;}
             player.Message(MessageHud.MessageType.Center,"Gathering ingredients from nearby chests…");
             foreach(var ingredient in plan)
             {
                 while(CraftingPlan.Missing(ingredient,(n,q)=>Count(n,q,false))>0)
                 {
                     if(!Valid())yield break;
+                    if(supplied?.Invoke()==true){completed();yield break;}
                     var source=Storage.CraftingChests().SelectMany(c=>c.GetInventory().GetAllItems().Select(i=>new{Chest=c,Item=i}))
                         .FirstOrDefault(x=>x.Item.m_shared.m_name==ingredient.Name && x.Item.m_worldLevel>=Game.m_worldLevel && (ingredient.Quality<0 || x.Item.m_quality==ingredient.Quality) &&
                             !InventoryBlock.Get(x.Chest.GetInventory()).IsSlotBlocked(x.Item.m_gridPos));

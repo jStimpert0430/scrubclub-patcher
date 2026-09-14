@@ -5,19 +5,19 @@ namespace SleepVote.Tests;
 public class BallotTests
 {
     static Dictionary<long,bool> Pair()=>new Dictionary<long,bool>{{1,true},{2,false}};
-    [Fact] public void UnanimousApprovalStillWaitsThirtySeconds()
+    [Fact] public void UnanimousApprovalStillWaitsFifteenSeconds()
     {
         var b=new Ballot();b.Tick(Pair(),true,0);
         Assert.True(b.NeedsVote(2));Assert.False(b.NeedsVote(1));
         Assert.True(b.Respond(2,b.Id,true,5));
-        b.Tick(Pair(),true,34.9);Assert.False(b.Approved);
-        b.Tick(Pair(),true,35);Assert.True(b.Approved);
+        b.Tick(Pair(),true,19.9);Assert.False(b.Approved);
+        b.Tick(Pair(),true,20);Assert.True(b.Approved);
     }
     [Fact] public void LastApprovalStartsGraceEvenNearVoteDeadline()
     {
         var b=new Ballot();b.Tick(Pair(),true,0);b.Respond(2,b.Id,true,59);
         b.Tick(Pair(),true,65);Assert.True(b.Active);Assert.False(b.Approved);
-        b.Tick(Pair(),true,89);Assert.True(b.Approved);
+        b.Tick(Pair(),true,74);Assert.True(b.Approved);
     }
     [Fact] public void NoAndTimeoutDoNotImmediatelyReprompt()
     {
@@ -34,10 +34,10 @@ public class BallotTests
     [Fact] public void JoiningPlayerMustAgreeAndRestartsGrace()
     {
         var b=new Ballot();b.Tick(Pair(),true,0);b.Respond(2,b.Id,true,1);
-        var three=Pair();three.Add(3,false);b.Tick(three,true,20);
+        var three=Pair();three.Add(3,false);b.Tick(three,true,10);
         Assert.False(b.Approved);Assert.True(b.NeedsVote(3));
-        b.Respond(3,b.Id,true,25);b.Tick(three,true,40);Assert.False(b.Approved);
-        b.Tick(three,true,55);Assert.True(b.Approved);
+        b.Respond(3,b.Id,true,12);b.Tick(three,true,26);Assert.False(b.Approved);
+        b.Tick(three,true,27);Assert.True(b.Approved);
     }
     [Fact] public void DepartingVoterIsRemovedButAtLeastOneBedRequired()
     {

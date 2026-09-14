@@ -9,6 +9,15 @@ namespace BlueDepot.Tests;
 // This is a compile/ABI regression check, not a substitute for an in-game test.
 public class GameContractTests
 {
+    [Fact] public void StationReachUsesVanillaHoverInsteadOfRootDistance()
+    {
+        using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
+        var valid=plugin.MainModule.Types.Single(t=>t.Name=="StationSupplies").Methods.Single(m=>m.Name=="Valid");
+        var calls=valid.Body.Instructions.Where(i=>i.Operand is MethodReference).Select(i=>(MethodReference)i.Operand).ToArray();
+        Assert.Contains(calls,m=>m.Name=="GetHoverObject");
+        Assert.Contains(calls,m=>m.Name=="IsChildOf");
+        Assert.DoesNotContain(calls,m=>m.DeclaringType.Name=="Vector3"&&m.Name=="Distance");
+    }
     [Fact] public void StationCarriedPathPrecedesTransferGateAndRemoteCounting()
     {
         using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));

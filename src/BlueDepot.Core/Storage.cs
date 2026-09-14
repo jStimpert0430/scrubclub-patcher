@@ -8,9 +8,11 @@ public enum Category { Materials, Weapons, Armor, Food, Potions, Ammunition, Too
 
 public static class Categories
 {
+    public static bool IsTrophy(string type,string? prefabId=null)=>type=="Trophy" || prefabId=="AncientSeed";
     // ItemType names come from Valheim; unknown/modded types remain visible.
-    public static Category Classify(string type, bool edible = false, bool potion = false)
+    public static Category Classify(string type, bool edible = false, bool potion = false,string? prefabId=null)
     {
+        if(IsTrophy(type,prefabId))return Category.Trophies;
         if (type == "Consumable") return potion ? Category.Potions : edible ? Category.Food : Category.Miscellaneous;
         switch (type)
         {

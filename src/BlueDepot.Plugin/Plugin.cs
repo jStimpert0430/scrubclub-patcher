@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace BlueDepot;
 
-[BepInPlugin(Guid, "Blue Depot", "0.1.5")]
+[BepInPlugin(Guid, "Blue Depot", "0.1.6")]
 [BepInDependency(Jotunn.Main.ModGuid)]
 [BepInDependency("com.maxsch.valheim.MultiUserChest")]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.Patch)]

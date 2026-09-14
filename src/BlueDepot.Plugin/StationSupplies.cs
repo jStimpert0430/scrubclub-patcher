@@ -18,7 +18,10 @@ internal static class StationSupplies
         var player=Player.m_localPlayer;
         if(!station || !player || user!=player || player.IsDead())return false;
         var nv=station.GetComponent<ZNetView>();
-        return nv && nv.IsValid() && Vector3.Distance(player.transform.position,station.transform.position)<=player.m_maxInteractDistance &&
+        // Vanilla's hover ray already checks eye-to-hit distance and obstruction.
+        // Large stations can be reachable at a switch while their origin is far away.
+        var hover=player.GetHoverObject();
+        return nv && nv.IsValid() && hover && (hover.transform==station.transform || hover.transform.IsChildOf(station.transform)) &&
             PrivateArea.CheckAccess(station.transform.position,0f,false,true);
     }
     // true means run vanilla; false means one owner-confirmed refill is pending.
@@ -28,22 +31,30 @@ internal static class StationSupplies
         if(Replaying || !Crafting.Enabled || !Plugin.SupplyStations.Value || user!=Player.m_localPlayer)return true;
         var inventory=user.GetInventory();
         var allowed=inputs.Where(i=>i).ToArray();
-        bool carried=allowed.Any(i=>inventory.HaveItem(i.m_itemData.m_shared.m_name));
-        bool inventoryBlocked=InventoryBlock.Get(inventory).IsAnySlotBlocked();
+        var names=new HashSet<string>(allowed.Select(i=>i.m_itemData.m_shared.m_name));
+        var block=InventoryBlock.Get(inventory);
+        // Inspect real stacks, never augmented crafting counts. A locked unrelated
+        // item must not prevent using fuel/food already carried by the player.
+        var carriedItems=inventory.GetAllItems().Where(i=>i.m_stack>0 && i.m_worldLevel>=Game.m_worldLevel && names.Contains(i.m_shared.m_name)).ToArray();
+        bool carried=carriedItems.Length>0;
+        bool relevantBlocked=carriedItems.Any(i=>block.IsSlotBlocked(i.m_gridPos)) ||
+            (explicitItem!=null && block.IsSlotBlocked(explicitItem.m_gridPos));
+        bool inventoryBlocked=block.IsAnySlotBlocked();
         // A chest transfer pause must not block ordinary carried-fuel interactions.
         // Preserve MUC's inventory locks: no bypass for slots involved in another transfer.
-        if(StationSupplyRules.UseCarriedFirst(carried || explicitItem!=null,inventoryBlocked))return true;
+        if(StationSupplyRules.UseCarriedFirst(carried || explicitItem!=null,relevantBlocked))return true;
         if(Crafting.Busy || Transfers.Busy || inventoryBlocked){result=false;return false;}
         var selected=allowed.FirstOrDefault(i=>Crafting.Count(i.m_itemData.m_shared.m_name,-1,true)>0);
         if(!StationSupplyRules.ShouldFetch(Valid(station,user),hasCapacity(),carried,selected,explicitItem!=null,false))return true;
         var plan=new[]{new Ingredient(selected.m_itemData.m_shared.m_name,1)};
         var intent=new DeferredIntent();
+        bool Supplied()=>inventory.GetAllItems().Any(i=>i.m_stack>0 && i.m_worldLevel>=Game.m_worldLevel && names.Contains(i.m_shared.m_name)) && !block.IsAnySlotBlocked();
         Crafting.Begin(plan,()=>Valid(station,user) && hasCapacity(),()=>
         {
             if(!intent.TryConsume(Valid(station,user) && hasCapacity()))return;
             Replaying=true;
             try{resume();}finally{Replaying=false;}
-        });
+        },Supplied);
         result=true;
         return false;
     }
