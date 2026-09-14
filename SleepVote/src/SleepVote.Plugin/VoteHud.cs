@@ -31,8 +31,10 @@ public sealed class VoteHud:MonoBehaviour
         int seconds=(int)Math.Ceiling(Math.Max(0,Remaining-(ticking?Time.unscaledTime-Received:0)));
         string heading=Phase==SleepPhase.WaitingForCombat?"Waiting for votes, player in combat":
             Phase==SleepPhase.GetToBed?"Get to bed — "+seconds+"s":
-            Phase==SleepPhase.Overridden?"Overridden — "+Reason:Phase==SleepPhase.Finished?"Night ended / sleep started":"Waiting for votes — "+seconds+"s";
-        if(Phase==SleepPhase.WaitingForCombat)heading+="\nCountdown paused ("+seconds+"s remaining)";
+            Phase==SleepPhase.Sleeping?"Advancing to morning…":
+            Phase==SleepPhase.WaitingForPlayers?"Waiting for player connection / character data":
+            Phase==SleepPhase.Overridden?"Overridden — "+Reason:Phase==SleepPhase.Finished?Reason:"Waiting for votes — "+seconds+"s";
+        if(Phase==SleepPhase.WaitingForCombat || Phase==SleepPhase.WaitingForPlayers)heading+="\nCountdown paused ("+seconds+"s remaining)";
         label.text="Sleep vote\n"+heading+"\n\n"+Rows;
         int lines=label.text.Split('\n').Length;
         float height=Mathf.Clamp(lines*24+32,180,700);

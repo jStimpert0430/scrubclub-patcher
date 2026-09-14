@@ -1,4 +1,6 @@
-# Sleep Vote 0.2.0
+# Sleep Vote 0.2.1
+
+Version 0.2.1 is included in modpack 0.2.7. See [the audit](AUDIT.md) for findings, fixes and validation limits.
 
 Separate mod requiring BepInEx and Jotunn on the server and every client.
 Version 0.2.0 is included in modpack 0.2.6. Local mock previews and automated tests
@@ -7,7 +9,7 @@ cover the new UI/state flow; real multiplayer combat behavior still needs playte
 When a player successfully enters a bed at night/afternoon, awake players receive
 Valheim's native Yes/No prompt. Bed eligibility (roof, fire, enemies, wetness,
 ownership and time) stays vanilla. Everyone awake must agree. No or no answer
-within 60 seconds cancels; all sleepers must leave their beds before retrying.
+within 60 seconds cancels; a player can get up and lie down again to start a fresh ballot.
 Players already in bed count as agreeing only while they stay there.
 
 After everyone agrees, a 15-second grace period lets nearby players get into bed.
@@ -49,11 +51,11 @@ Affected players receive a top-left message naming the initiator: "PLAYER has in
 are suppressed until combat ends. Local combat detection hides them immediately,
 without waiting for the next server update. Sleeping players see "Waiting for votes, player in
 combat" and the live participant list. Combat uses the game's enemy-awareness or
-attack state followed by eight quiet seconds. Clients report their own state over
+targeting or actual attacker damage followed by eight quiet seconds. Tool animations alone do not count as combat. Clients report their own state over
 authenticated peer RPCs; missing/stale reports pause the ballot conservatively.
 This is cooperative client reporting, not an anti-cheat proof of combat state.
 
-All clients and the server need this version together (the state RPC changed).
+All clients and the server need this version together (0.2.1 adds sequenced state and answer receipts).
 
 
 Local UI previews (solo world, no real time skip):

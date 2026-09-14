@@ -31,7 +31,7 @@ for mod in ['RoadLights', 'SleepVote']:
         road = root / mod
     for source in road.rglob('*'):
         relative = source.relative_to(road)
-        if relative.parts[0] not in {'src', 'tests', 'scripts', 'README.md'}:
+        if relative.parts[0] not in {'src', 'tests', 'scripts', 'README.md', 'AUDIT.md'}:
             continue
         if not source.is_file() or any(part in ignored for part in relative.parts):
             continue
