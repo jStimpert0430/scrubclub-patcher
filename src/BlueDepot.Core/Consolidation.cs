@@ -19,9 +19,10 @@ public static class Consolidation
     // This cannot ping-pong stacks between concurrently sorting chest owners.
     public static ConsolidationMove? Next(IEnumerable<Chest> inventories,string sourceChest)
     {
-        var rows=inventories.Where(c=>c.Accessible).GroupBy(c=>c.Id).Select(g=>g.First())
+        var rows=inventories.Where(c=>c.Accessible && !c.Private).GroupBy(c=>c.Id).Select(g=>g.First())
             .OrderBy(c=>c.Id,StringComparer.Ordinal).SelectMany(c=>c.Items.OrderBy(i=>int.Parse(i.Slot))
-                .Select(i=>(Chest:c,Item:i))).ToArray();
+                .Select(i=>(Chest:c,Item:i))).OrderBy(row=>row.Item.PreferCart && row.Chest.Cart?0:1)
+            .ThenBy(row=>row.Chest.Id,StringComparer.Ordinal).ThenBy(row=>int.Parse(row.Item.Slot)).ToArray();
         for(int source=1;source<rows.Length;source++)
         {
             var from=rows[source];if(from.Chest.Id!=sourceChest)continue;

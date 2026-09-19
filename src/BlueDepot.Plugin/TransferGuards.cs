@@ -1,3 +1,4 @@
+using UnityEngine;
 using System.Runtime.CompilerServices;
 using BlueDepot.Core;
 using HarmonyLib;
@@ -10,20 +11,25 @@ namespace BlueDepot;
 // replacement item when two players click the same stale row. All peers require this mod.
 internal static class TransferGuards
 {
-    const string Marker="BlueDepot.v1";
-    sealed class Expected { internal string Key;internal Expected(string key){Key=key;} }
+    const string Marker="BlueDepot.v2";
+    sealed class Expected { internal string Key;internal bool PrivateAccess;internal Expected(string key,bool privateAccess){Key=key;PrivateAccess=privateAccess;} }
     static readonly ConditionalWeakTable<object,Expected> guards=new ConditionalWeakTable<object,Expected>();
     internal static void Stamp(object request,ItemDrop.ItemData item)
-    {if(Transfers.issuing && item!=null)guards.Add(request,new Expected(Storage.Key(item)));}
+    {if(Transfers.issuing && item!=null)guards.Add(request,new Expected(Storage.Key(item),Transfers.PrivateAccess));}
     internal static bool Read(object request,out string key)
     {if(guards.TryGetValue(request,out var guard)){key=guard.Key;return true;}key=null;return false;}
+    internal static bool Permitted(object request,Inventory inventory)
+    {
+        if(!guards.TryGetValue(request,out var expected))return true; // ordinary manual chest UI
+        return expected.PrivateAccess || !ContainerExtend.GetContainer(inventory,out var owner) || !ChestPrivacy.IsPrivate(owner.Container);
+    }
     internal static void Write(object request,ZPackage package)
-    {if(Read(request,out var key)){package.Write(Marker);package.Write(key);}}
+    {if(Read(request,out var key)){package.Write(Marker);package.Write(key);package.Write(guards.GetValue(request,_=>null).PrivateAccess);}}
     internal static void Load(object request,ZPackage package)
     {
         if(package.GetPos()>=package.Size())return;
         var old=package.GetPos();
-        if(package.ReadString()==Marker)guards.Add(request,new Expected(package.ReadString()));else package.SetPos(old);
+        if(package.ReadString()==Marker)guards.Add(request,new Expected(package.ReadString(),package.ReadBool()));else package.SetPos(old);
     }
 }
 [HarmonyPatch(typeof(RequestChestAdd),MethodType.Constructor,new[]{typeof(Vector2i),typeof(int),typeof(ItemDrop.ItemData),typeof(Inventory),typeof(Inventory)})]
@@ -52,7 +58,7 @@ static class GuardMove
         if(!TransferGuards.Read(request,out var key))return true;
         var current=inventory.GetItemAt(request.fromPos.x,request.fromPos.y);
         var target=inventory.GetItemAt(request.toPos.x,request.toPos.y);
-        if(request.toPos.x>=0 && request.toPos.y>=0 && request.toPos.x<inventory.GetWidth() && request.toPos.y<inventory.GetHeight() &&
+        if(TransferGuards.Permitted(request,inventory) && request.toPos.x>=0 && request.toPos.y>=0 && request.toPos.x<inventory.GetWidth() && request.toPos.y<inventory.GetHeight() &&
             current!=null && request.dragAmount<=current.m_stack &&
             TransferRules.CanRemove(key,Storage.Key(current),request.dragAmount) &&
             TransferRules.CanDeposit(key,target==null?null:Storage.Key(target),request.dragAmount))return true;
@@ -64,9 +70,11 @@ static class GuardAdd
 {
     static bool Prefix(Inventory inventory,RequestChestAdd request,ref RequestChestAddResponse __result)
     {
+        if(!PileStorage.Accepts(inventory,request.dragItem))
+        {__result=new RequestChestAddResponse(request.RequestID,false,request.dragItem?.m_gridPos??Vector2i.zero,0,request.dragItem);return false;}
         if(!TransferGuards.Read(request,out var key))return true;
         var current=inventory.GetItemAt(request.toPos.x,request.toPos.y);
-        if(TransferRules.CanDeposit(key,current==null?null:Storage.Key(current),request.dragItem?.m_stack??0))return true;
+        if(TransferGuards.Permitted(request,inventory) && TransferRules.CanDeposit(key,current==null?null:Storage.Key(current),request.dragItem?.m_stack??0))return true;
         __result=new RequestChestAddResponse(request.RequestID,false,request.dragItem.m_gridPos,0,request.dragItem);return false;
     }
 }
@@ -75,9 +83,17 @@ static class GuardRemove
 {
     static bool Prefix(Inventory inventory,RequestChestRemove request,ref RequestChestRemoveResponse __result)
     {
+        // A vanilla drag can exchange a player item for a pile item. Piles
+        // accept only their material; reject swaps before either side mutates.
+        if(request.switchItem!=null && ContainerExtend.GetContainer(inventory,out var owner) && PileStorage.IsPile(owner.Container))
+        {
+            var at=inventory.GetItemAt(request.fromPos.x,request.fromPos.y);
+            if(at==null || Storage.Key(at)!=Storage.Key(request.switchItem))
+            {__result=new RequestChestRemoveResponse(request.RequestID,false,0,false,request.switchItem);return false;}
+        }
         if(!TransferGuards.Read(request,out var key))return true;
         var current=inventory.GetItemAt(request.fromPos.x,request.fromPos.y);
-        if(TransferRules.CanRemove(key,current==null?null:Storage.Key(current),request.dragAmount))return true;
+        if(TransferGuards.Permitted(request,inventory) && TransferRules.CanRemove(key,current==null?null:Storage.Key(current),request.dragAmount))return true;
         __result=new RequestChestRemoveResponse(request.RequestID,false,0,false,null);return false;
     }
 }

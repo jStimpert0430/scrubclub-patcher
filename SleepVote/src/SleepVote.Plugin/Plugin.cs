@@ -7,7 +7,7 @@ using Jotunn.Utils;
 using SleepVote.Core;
 using UnityEngine;
 namespace SleepVote;
-[BepInPlugin("scrubclub.sleepvote","Sleep Vote","0.2.1")]
+[BepInPlugin("scrubclub.sleepvote","Sleep Vote","0.2.2")]
 [BepInDependency(Jotunn.Main.ModGuid)]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod,VersionStrictness.Patch)]
 public sealed class Plugin:BaseUnityPlugin
@@ -25,7 +25,8 @@ public sealed class Plugin:BaseUnityPlugin
     Dictionary<long,bool> beds=new Dictionary<long,bool>();
     Harmony harmony;
     VoteHud hud;
-    float nextTick,lastThreat=-100,expires,terminalSince;
+    float nextTick,expires,terminalSince;
+    readonly RecentCombat recentCombat=new RecentCombat();
     int pending,lastNotified,lastOutcome,initiatorVote;
     string initiator="A player";
     YesNoPopup popup;
@@ -42,7 +43,8 @@ public sealed class Plugin:BaseUnityPlugin
         new Terminal.ConsoleCommand("sleepvote_status","Print local sleep-vote timing and state diagnostics.",args=>
         {
             if(!ZNet.instance || !EnvMan.instance){args.Context.AddString("No active world.");return;}
-            args.Context.AddString($"Sleep Vote 0.2.1: server={ZNet.instance.IsServer()}, phase={hud.Phase}, ballot={clientVote.Id}, revision={clientVote.Revision}, awaitingReceipt={clientVote.WaitingForReceipt}, hidden={HideVoteUi}");
+            args.Context.AddString($"Sleep Vote 0.2.2: server={ZNet.instance.IsServer()}, phase={hud.Phase}, ballot={clientVote.Id}, revision={clientVote.Revision}, awaitingReceipt={clientVote.WaitingForReceipt}, hidden={HideVoteUi}");
+            args.Context.AddString($"Recent attack window: {recentCombat.Remaining(Time.unscaledTime):F1}s remaining (20s after last attack or incoming hit). Nearby enemies do not extend it.");
             args.Context.AddString($"World time={ZNet.instance.GetTimeSeconds():F2}, sleepWindow={WindowOpen()}, visualNight={EnvMan.IsNight()}, timeSkipping={EnvMan.instance.IsTimeSkipping()}, serverSleeping={(Game.instance && gameSleeping(Game.instance))}");
         });
         new Terminal.ConsoleCommand("sleepvote_preview","Solo mock: sleepvote_preview sleeper|voter [votes|combat|bed|sleeping|finished|connection|overridden], or stop. World time unchanged.",args=>
@@ -80,16 +82,15 @@ public sealed class Plugin:BaseUnityPlugin
     {
         ballot=new Ballot();clientVote=new ClientVote();revision=0;nextTick=0;loggedId=0;loggedPhase=SleepPhase.Idle;registered.Clear();combat.Clear();names.Clear();beds.Clear();
         pending=0;preview=false;lastOutcome=lastNotified=initiatorVote=0;combatEpisode=false;reportedCombat=false;
-        lastThreat=-100;ClosePopup();if(hud)hud.Clear();
+        recentCombat.Reset();ClosePopup();if(hud)hud.Clear();
     }
-    bool LocalCombat()
+    internal bool LocalCombat()
     {
         var p=Player.m_localPlayer;
         if(!p || p.IsDead())return false;
-        if(p.IsSensed() || p.IsTargeted())lastThreat=Time.unscaledTime;
-        return Time.unscaledTime-lastThreat<8;
+        return recentCombat.Active(Time.unscaledTime);
     }
-    internal void RecordCombatHit()=>lastThreat=Time.unscaledTime;
+    internal void RecordCombatHit()=>recentCombat.Record(Time.unscaledTime);
     bool ValidPeer(ZNetPeer peer)=>ZNet.instance && ZNet.instance.IsServer() && peer.IsReady() && ZNet.instance.GetPeers().Contains(peer);
     internal void Register(ZNetPeer peer)
     {
@@ -342,14 +343,50 @@ static class TrackNativeSleep
     }
 }
 
-[HarmonyPatch(typeof(Player),"OnDamaged")]
+[HarmonyPatch(typeof(Character),"RPC_Damage")]
 static class TrackCombatDamage
 {
-    static void Postfix(Player __instance,HitData hit)
+    static void Prefix(Character __instance,HitData hit)
     {
-        // Chopping, mining and hoe animations are not combat. Actual attacks
-        // against this player still suppress the UI, including PvP damage.
-        if(__instance==Player.m_localPlayer && hit.GetTotalDamage()>0 && hit.GetAttacker() && hit.GetAttacker()!=__instance)
+        // Observe incoming attacks before vanilla block/dodge damage reduction.
+        // Weather, falls and other environmental damage have no character attacker.
+        if(__instance==Player.m_localPlayer && !__instance.IsDead() && hit!=null &&
+            hit.GetTotalDamage()>0 && hit.GetAttacker() && hit.GetAttacker()!=__instance)
+            Plugin.Instance?.RecordCombatHit();
+    }
+}
+[HarmonyPatch(typeof(Attack),"Start")]
+static class TrackCombatSwing
+{
+    static void Postfix(Humanoid character,ItemDrop.ItemData weapon,bool __result)
+    {
+        // Ordinary weapon swings count on start; utility swings only count
+        // through TrackOutgoingCombat when they connect with a character.
+        if(!__result || character!=Player.m_localPlayer || character.IsDead() || weapon==null)return;
+        var data=weapon.m_shared;
+        if(CombatActions.CountsSwing(data.m_itemType.ToString(),data.m_skillType.ToString(),data.m_damages.m_chop))Plugin.Instance?.RecordCombatHit();
+    }
+}
+
+[HarmonyPatch(typeof(Bed),"CheckEnemies")]
+static class RecentCombatBedCheck
+{
+    static bool Prefix(Player human,ref bool __result)
+    {
+        if(!Plugin.Instance || human!=Player.m_localPlayer)return true;
+        __result=!Plugin.Instance.LocalCombat();
+        if(!__result)human.Message(MessageHud.MessageType.Center,"Wait until 20 seconds have passed since your last attack or incoming hit.");
+        return false;
+    }
+}
+
+[HarmonyPatch(typeof(Character),"Damage")]
+static class TrackOutgoingCombat
+{
+    static void Prefix(Character __instance,HitData hit)
+    {
+        var player=Player.m_localPlayer;
+        if(player && !player.IsDead() && __instance!=player && !__instance.IsDead() && hit!=null && hit.GetTotalDamage()>0 && hit.GetAttacker()==player)
             Plugin.Instance?.RecordCombatHit();
     }
 }

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net472</TargetFramework><AssemblyName>ScrubclubAchievements</AssemblyName><Version>0.1.0</Version><Nullable>disable</Nullable></PropertyGroup><ItemGroup>
+<Reference Include="../../BlueDepot/.deps/BepInEx.dll"><Private>false</Private></Reference>
+<Reference Include="../../BlueDepot/.deps/0Harmony.dll"><Private>false</Private></Reference>
+<Reference Include="/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/UnityEngine*.dll"><Private>false</Private></Reference>
+</ItemGroup></Project>

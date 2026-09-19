@@ -8,6 +8,7 @@ namespace BlueDepot;
 internal static class Transfers
 {
     static readonly TransferGate gate=new TransferGate();
+    internal static bool PrivateAccess;
     internal static bool issuing=>gate.Dispatching;static float issuedAt;
     internal static string Status="";
     internal static int ReplySerial;
@@ -24,10 +25,10 @@ internal static class Transfers
         }
     }
     // MUC already handles synchronous local-owner responses. Only remote requests need a gate.
-    static void Issue(Func<IRequest> send)
+    static void Issue(Func<IRequest> send,bool privateAccess=false)
     {
         if(Busy || !gate.BeginDispatch())return;
-        int? pending=null;Status="Transferring…";
+        int? pending=null;Status="Transferring…";PrivateAccess=privateAccess;
         try
         {
             var request=send();
@@ -35,7 +36,7 @@ internal static class Transfers
             else if(request!=null)Status="Inventory changed or has no room. Refresh and try again.";
         }
         catch(Exception e){gate.Fault();Status="Transfer error; inspect the game log before retrying.";Plugin.Instance.LoggerForTransfers(e);}
-        finally{gate.EndDispatch(pending);}
+        finally{gate.EndDispatch(pending);PrivateAccess=false;}
     }
     internal static void Reply(int id,bool success,int amount)
     {
@@ -52,18 +53,18 @@ internal static class Transfers
         Issue(()=>ContainerHandler.RemoveItemFromChest(source,item,inv,Storage.Position(target.Slot,inv),Player.m_localPlayer.GetZDOID(),Math.Min(amount,target.Amount)));
         return true;
     }
-    internal static void Deposit(Container source,Container target,ItemDrop.ItemData item,Vector2i slot,int amount)
+    internal static void Deposit(Container source,Container target,ItemDrop.ItemData item,Vector2i slot,int amount,bool direct=false)
     {
         if(Crafting.Busy)return;
-        if(!Storage.CanAccess(target) || target.IsInUse())return;
+        if(!Storage.CanAccess(target) || target.IsInUse() || ((ChestPrivacy.IsPrivate(target) && !direct) || (source && ChestPrivacy.IsPrivate(source))))return;
         Inventory inv;
-        if(source){if(!Storage.CanAccess(source) || !source.GetComponent<ZNetView>().IsOwner())return;inv=source.GetInventory();}
+        if(source){if(!Storage.CanAccess(source) || !Storage.View(source).IsOwner())return;inv=source.GetInventory();}
         else inv=Player.m_localPlayer.GetInventory();
         if(!inv.ContainsItem(item) || InventoryBlock.Get(inv).IsSlotBlocked(item.m_gridPos))return;
         var at=target.GetInventory().GetItemAt(slot.x,slot.y);
         // Refuse replacement/swap semantics: this UI only ever deposits into compatible space.
         if(at!=null && Storage.Key(at)!=Storage.Key(item))return;
-        Issue(()=>ContainerHandler.AddItemToChest(target,item,inv,slot,Player.m_localPlayer.GetZDOID(),amount));
+        Issue(()=>ContainerHandler.AddItemToChest(target,item,inv,slot,Player.m_localPlayer.GetZDOID(),amount),direct && !source);
     }
     internal static bool Take(Container depot,Container source,ItemDrop.ItemData item,int amount=int.MaxValue,Vector2i? destination=null)
     {
@@ -91,7 +92,7 @@ internal static class Transfers
         }
         if(capacity<=0 || InventoryBlock.Get(inv).IsSlotBlocked(slot))return false;
         int moved=GridRules.MoveAmount(amount,item.m_stack,capacity);
-        Issue(()=>ContainerHandler.RemoveItemFromChest(source,item,inv,slot,Player.m_localPlayer.GetZDOID(),moved));
+        Issue(()=>ContainerHandler.RemoveItemFromChest(source,item,inv,slot,Player.m_localPlayer.GetZDOID(),moved),source==depot);
         return true;
     }
     internal static bool MoveWithin(Container depot,Container source,ItemDrop.ItemData item,Vector2i slot,int amount,bool requireOpenSession=true)
@@ -109,9 +110,9 @@ internal static class Transfers
         {
             var request=new RequestMove(item,slot,moved,inv);
             InventoryPreview.AddPackage(request);
-            MultiUserChest.Patches.GamePatches.InvokeRPC(source.GetComponent<ZNetView>(),MultiUserChest.Patches.ContainerPatch.ItemMoveRPC,request);
+            MultiUserChest.Patches.GamePatches.InvokeRPC(Storage.View(source),MultiUserChest.Patches.ContainerPatch.ItemMoveRPC,request);
             return request;
-        });
+        },source==depot && requireOpenSession);
         return true;
     }
 

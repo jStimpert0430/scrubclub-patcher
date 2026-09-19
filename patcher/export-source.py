@@ -25,17 +25,17 @@ for name in ['LICENSE', 'Directory.Build.props', 'dependencies.lock.json', '.git
     shutil.copy2(root / name, out / name)
 shutil.copy2(root / 'README.md', out / 'BLUE-DEPOT.md')
 # Export only explicitly selected standalone mods.
-for mod in ['RoadLights', 'SleepVote']:
+for mod in ['RoadLights', 'SleepVote', 'MonkStyle', 'Nimbus', 'ScrubclubAchievements']:
     road = root.parent / mod
     if not road.exists():
         road = root / mod
     for source in road.rglob('*'):
         relative = source.relative_to(road)
-        if relative.parts[0] not in {'src', 'tests', 'scripts', 'README.md', 'AUDIT.md'}:
+        if relative.parts[0] not in {'src', 'tests', 'scripts', 'README.md', 'AUDIT.md', 'Directory.Build.props'}:
             continue
         if not source.is_file() or any(part in ignored for part in relative.parts):
             continue
-        if source.suffix not in {'.cs', '.csproj', '.sh', '.md'}:
+        if source.suffix not in {'.cs', '.csproj', '.sh', '.md', '.props'}:
             continue
         target = out / mod / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -51,7 +51,7 @@ Windows players: download **ScrubclubPatcher-windows-x64.zip**, extract everythi
 
 Linux players: use **ScrubclubPatcher-linux-x64.tar.gz**, then run `./ScrubclubPatcher`. The ImGui interface and Launch game button work on both platforms. Native Linux x64 only.
 
-The patcher installs Blue Depot, Road Lights, Sleep Vote, the compatible MultiUserChest fork, Jötunn and BepInEx. Road Lights removes decorative-light fuel upkeep and station requirements, and adds optional free freestanding lights when using the hoe's Pathen tool. Sleep Vote asks awake players to approve passing the night, with a 15-second grace period to get into bed after unanimous approval. Live vote status stays visible outside combat; combat pauses the countdown and suppresses panels and dialogs for affected players. Downloads come from GitHub over HTTPS and are signature-checked before installation. Existing configuration is preserved; replaced files are backed up. No home-network hosting service or server credentials are involved.
+The patcher installs Blue Depot, Road Lights, Sleep Vote, MonkStyle, Nimbus, Scrubclub Achievements, the compatible MultiUserChest fork, Jötunn and BepInEx. Road Lights removes decorative-light fuel upkeep and station requirements, and adds optional free freestanding lights when using the hoe's Pathen tool. Sleep Vote asks awake players to approve passing the night, with a 15-second grace period to get into bed after unanimous approval. Live vote status stays visible outside combat; combat pauses the countdown and suppresses panels and dialogs for affected players. Downloads come from GitHub over HTTPS and are signature-checked before installation. Existing configuration is preserved; replaced files are backed up. No home-network hosting service or server credentials are involved.
 
 This is an initial test release. Automated tests cover installation and failures; the Windows executable has been exercised under Wine, not yet on a real Windows PC. The patcher does not deploy mods to a game server. Test the mod in a local world before server rollout.
 

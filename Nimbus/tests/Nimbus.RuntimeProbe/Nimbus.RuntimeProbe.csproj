@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net472</TargetFramework><AssemblyName>NimbusRuntimeProbe</AssemblyName><Nullable>disable</Nullable></PropertyGroup><ItemGroup>
+<Reference Include="../../../.deps/*.dll"><Private>false</Private></Reference>
+
+
+<Reference Include="/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_*.dll"><Private>false</Private></Reference>
+<Reference Include="/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/UnityEngine*.dll"><Private>false</Private></Reference>
+<Reference Include="../../src/Nimbus.Plugin/bin/Release/net472/Nimbus.dll"><Private>false</Private></Reference><Reference Include="../../src/Nimbus.Core/bin/Release/netstandard2.0/Nimbus.Core.dll"><Private>false</Private></Reference></ItemGroup></Project>

@@ -34,13 +34,14 @@ public sealed class Stack
     public string Key { get; }
     public string Name { get; }
     public string ItemId { get; }
+    public bool PreferCart { get; }
     public Category Category { get; }
     public int Count { get; }
     public int Maximum { get; }
-    public Stack(string slot, string key, string name, Category category, int count, int maximum, string? itemId = null)
+    public Stack(string slot, string key, string name, Category category, int count, int maximum, string? itemId = null, bool nonTeleportable = false)
     {
         if (count <= 0 || maximum <= 0 || count > maximum) throw new ArgumentOutOfRangeException(nameof(count));
-        Slot = slot; Key = key; Name = name; Category = category; Count = count; Maximum = maximum; ItemId = itemId ?? key;
+        Slot = slot; Key = key; Name = name; Category = category; Count = count; Maximum = maximum; ItemId = itemId ?? key; PreferCart = nonTeleportable || StorageRules.IsOre(ItemId);
     }
 }
 
@@ -50,14 +51,16 @@ public sealed class Chest
     public int Capacity { get; }
     public double Distance { get; }
     public bool Accessible { get; }
+    public bool Private { get; }
+    public bool Cart { get; }
     public IReadOnlyList<Stack> Items { get; }
-    public Chest(string id, int capacity, double distance, bool accessible, IEnumerable<Stack> items)
+    public Chest(string id, int capacity, double distance, bool accessible, IEnumerable<Stack> items, bool isPrivate = false, bool cart = false)
     {
         if (capacity < 0 || distance < 0 || double.IsNaN(distance)) throw new ArgumentOutOfRangeException(nameof(capacity));
         var copy = items.ToArray();
         if (copy.Length > capacity || copy.Select(x => x.Slot).Distinct().Count() != copy.Length)
             throw new ArgumentException("Invalid inventory slots");
-        Id = id; Capacity = capacity; Distance = distance; Accessible = accessible; Items = copy;
+        Id = id; Capacity = capacity; Distance = distance; Accessible = accessible; Items = copy; Private = isPrivate; Cart = cart;
     }
 }
 
@@ -79,7 +82,7 @@ public sealed class StorageView
     {
         if (radius <= 0 || double.IsNaN(radius) || double.IsInfinity(radius)) throw new ArgumentOutOfRangeException(nameof(radius));
         Chests = new[] { depot }.Concat(nearby)
-            .Where(c => c.Accessible && (c.Id == depot.Id || c.Distance <= radius))
+            .Where(c => c.Accessible && (c.Id == depot.Id || (!depot.Private && !c.Private && c.Distance <= radius)))
             .GroupBy(c => c.Id, StringComparer.Ordinal).Select(g => g.First())
             .OrderBy(c => c.Distance).ThenBy(c => c.Id, StringComparer.Ordinal).ToArray();
     }
@@ -99,20 +102,24 @@ public static class Routing
     // never execute a stale bulk plan against inventories changed by another player.
     public static Placement? Next(Stack item, string sourceId, IEnumerable<Chest> candidates)
     {
-        var targets = candidates.Where(c => c.Accessible && c.Id != sourceId)
+        var targets = candidates.Where(c => c.Accessible && !c.Private && c.Id != sourceId)
             .GroupBy(c => c.Id).Select(g => g.First()).ToArray();
-        // Partial compatible stacks globally outrank all empty slots.
-        foreach (var c in Rank(targets, item))
+        // Ore and non-teleportable items fill eligible carts first, even ahead of partial stacks in boxes.
+        // Within each tier, partial stacks still outrank empty slots.
+        foreach (var tier in targets.GroupBy(c => item.PreferCart && c.Cart ? 0 : 1).OrderBy(g => g.Key))
+        {
+        foreach (var c in Rank(tier, item))
         foreach (var stack in c.Items.OrderBy(i => i.Slot, StringComparer.Ordinal))
             if (stack.Key == item.Key && stack.Maximum == item.Maximum && stack.Count < stack.Maximum)
                 return new Placement(c.Id, stack.Slot, Math.Min(item.Count, stack.Maximum - stack.Count));
-        foreach (var c in Rank(targets, item))
+        foreach (var c in Rank(tier, item))
         {
             if (c.Items.Count >= c.Capacity) continue;
             var used = new HashSet<string>(c.Items.Select(i => i.Slot));
             for (int slot = 0; slot < c.Capacity; slot++)
                 if (!used.Contains(slot.ToString(System.Globalization.CultureInfo.InvariantCulture)))
                     return new Placement(c.Id, slot.ToString(System.Globalization.CultureInfo.InvariantCulture), item.Count);
+        }
         }
         return null; // Overflow stays at its source.
     }

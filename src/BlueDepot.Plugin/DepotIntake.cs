@@ -16,7 +16,7 @@ internal sealed partial class DepotUi
         var queued=BlueDepot.Core.IntakeQueue.Decode(depot.GetComponent<ZNetView>().GetZDO().GetString("BlueDepot.SortQueue",""));
         return new BlueDepot.Core.Chest(snapshot.Id,snapshot.Capacity,snapshot.Distance,snapshot.Accessible,
             snapshot.Items.Select(i=>intake.ContainsKey(int.Parse(i.Slot)) || queued.ContainsKey(int.Parse(i.Slot))
-                ? new BlueDepot.Core.Stack(i.Slot,"reserved:"+i.Key,i.Name,i.Category,i.Count,i.Maximum):i));
+                ? new BlueDepot.Core.Stack(i.Slot,"reserved:"+i.Key,i.Name,i.Category,i.Count,i.Maximum,i.ItemId,i.PreferCart):i));
     }
     bool IntakeContains(string slot,string key)=>int.TryParse(slot,out var n) && intake.TryGetValue(n,out var expected) && key==expected;
     bool DepositIntake(ItemDrop.ItemData item,int amount)
@@ -29,7 +29,7 @@ internal sealed partial class DepotUi
             var pos=new Vector2i(n%inventory.GetWidth(),n/inventory.GetWidth());
             if(inventory.GetItemAt(pos.x,pos.y)!=null || InventoryBlock.Get(inventory).IsSlotBlocked(pos))continue;
             intake[n]=Storage.Key(item);
-            Transfers.Deposit(null,depot,item,pos,Math.Min(amount,item.m_stack));
+            Transfers.Deposit(null,depot,item,pos,Math.Min(amount,item.m_stack),true);
             return true;
         }
         Transfers.Status="Internal storage is full. Withdraw items to make room for intake.";

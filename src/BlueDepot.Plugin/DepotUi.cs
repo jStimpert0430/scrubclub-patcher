@@ -18,6 +18,7 @@ internal sealed partial class DepotUi:MonoBehaviour
     readonly List<GameObject> rows=new List<GameObject>();
     Button dropMaterialsButton;ScrollRect itemScroll;RectTransform scrollContent;
     bool bulkRunning;
+    internal static bool BulkRunning=>instance && instance.bulkRunning;
     readonly List<(Button Button,Category? Category,bool Drop,bool Internal,GameObject Outline)> categoryButtons=new List<(Button,Category?,bool,bool,GameObject)>();
     internal static bool EditingSearch => instance && instance.panel && instance.searchField && instance.searchField.isFocused;
     void Awake(){instance=this;}
@@ -91,7 +92,7 @@ internal sealed partial class DepotUi:MonoBehaviour
         // Show(null) keeps inventory, character stats and crafting available, without opening
         // the depot as a vanilla 10x10 grid or replacing its physical inventory.
         var gui=InventoryGui.instance;
-        panel=GUIManager.Instance.CreateWoodpanel(gui.m_player,new Vector2(0,0),new Vector2(0,0),Vector2.zero,634,500,false);
+        panel=GUIManager.Instance.CreateWoodpanel(gui.m_player,new Vector2(0,0),new Vector2(0,0),Vector2.zero,634,542,false);
         panel.name="BlueDepotUI";
         var r=panel.GetComponent<RectTransform>();r.pivot=new Vector2(0,1);r.anchoredPosition=new Vector2(-10,-16);
         panel.AddComponent<CanvasGroup>();
@@ -131,6 +132,7 @@ internal sealed partial class DepotUi:MonoBehaviour
         Button(panel.transform,"Sort",14,422,120,28,SortControlled);
         Label(panel.transform,"Scroll to browse · Items ordered by ID",148,427,440,24,13);
         footer=Label(panel.transform,"",14,457,582,40,13);
+        PrivacyCheckbox.Create(panel.transform,depot,new Vector2(14,42),582);
     }
     static GameObject CreateTabOutline(Button button)
     {
@@ -257,7 +259,7 @@ internal sealed partial class DepotUi:MonoBehaviour
         var target=placement==null?depot:destinations.First(c=>Storage.Id(c)==placement.ChestId);
         if(placement==null)placement=Routing.Next(Storage.Item(item,inv),"player",new[]{InternalSnapshot()});
         if(placement==null){Transfers.Status="Drop box full. Wait for sorting or withdraw items.";return false;}
-        Transfers.Deposit(null,target,item,Storage.Position(placement.Slot,target.GetInventory()),Math.Min(amount,placement.Amount));
+        Transfers.Deposit(null,target,item,Storage.Position(placement.Slot,target.GetInventory()),Math.Min(amount,placement.Amount),target==depot);
         return true;
     }
     System.Collections.IEnumerator DepositMaterials()
@@ -266,24 +268,51 @@ internal sealed partial class DepotUi:MonoBehaviour
         if(bulkRunning)yield break;
         bulkRunning=true;
         var inventory=Player.m_localPlayer.GetInventory();
-        var items=inventory.GetAllItems().Where(i=>EligibleMaterial(i,inventory)).ToArray();
+        var sessionPanel=panel;var sessionDepot=depot;
         try
         {
-        foreach(var item in items)
+        var pass=new BulkDepositPass();
+        // Let existing operations release their inventory slots before taking the batch.
+        float deadline=Time.realtimeSinceStartup+15;
+        while(Transfers.Busy || Crafting.Busy || InventoryBlock.Get(inventory).IsAnySlotBlocked())
         {
-            if(!panel || !Storage.ValidSession(depot))yield break;
-            if(Transfers.Busy)yield break;
-            if(!inventory.ContainsItem(item) || !EligibleMaterial(item,inventory))continue;
-            while(inventory.ContainsItem(item) && EligibleMaterial(item,inventory))
-            {
-                int before=item.m_stack;
-                if(!Deposit(item,int.MaxValue,true))break;
-                yield return new WaitForSecondsRealtime(.15f);
-                while(Transfers.Busy){if(!panel)yield break;yield return null;}
-                if(!panel || !Storage.ValidSession(depot))yield break;
-                if(inventory.ContainsItem(item) && item.m_stack>=before)break;
-            }
+            if(panel!=sessionPanel || !panel || Time.realtimeSinceStartup>=deadline)yield break;
+            yield return null;
         }
+        foreach(var item in inventory.GetAllItems().Where(i=>EligibleMaterial(i,inventory)))pass.Include(Storage.Key(item),item.m_stack);
+        while(panel && panel==sessionPanel && depot==sessionDepot && Storage.ValidSession(depot))
+        {
+            deadline=Time.realtimeSinceStartup+15;
+            while(Transfers.Busy || Crafting.Busy || InventoryBlock.Get(inventory).IsAnySlotBlocked())
+            {
+                if(panel!=sessionPanel || !panel || Time.realtimeSinceStartup>=deadline)yield break;
+                yield return null;
+            }
+            if(!Storage.ValidSession(depot))yield break;
+            var item=inventory.GetAllItems().FirstOrDefault(i=>EligibleMaterial(i,inventory) && pass.Allowance(Storage.Key(i))>0);
+            if(item==null)break;
+            string key=Storage.Key(item);
+            int before=inventory.GetAllItems().Where(i=>Storage.Key(i)==key).Sum(i=>i.m_stack);
+            int serial=Transfers.ReplySerial;
+            if(!Deposit(item,pass.Allowance(key),true)){pass.NoSpace(key);continue;}
+            deadline=Time.realtimeSinceStartup+16;
+            while(Transfers.Busy)
+            {
+                if(panel!=sessionPanel || !panel || Time.realtimeSinceStartup>=deadline)yield break;
+                yield return null;
+            }
+            bool confirmed=Transfers.ReplySerial!=serial;
+            int after=inventory.GetAllItems().Where(i=>Storage.Key(i)==key).Sum(i=>i.m_stack);
+            pass.Observe(key,before,after,confirmed || after==before);
+            if(!confirmed && after<before){Transfers.Status="Deposit stopped: source changed without a transfer confirmation.";yield break;}
+            // The reply can precede the destination's replicated inventory. Give it
+            // time to arrive before selecting space again, especially after a decline.
+            yield return new WaitForSecondsRealtime(after<before && confirmed ? .25f : 1f);
+        }
+        if(panel && panel==sessionPanel && !Transfers.Busy)
+            Transfers.Status=inventory.GetAllItems().Any(i=>EligibleMaterial(i,inventory))
+                ?"Some materials remain: storage is full or unavailable."
+                :"Materials deposited.";
         }
         finally{bulkRunning=false;}
     }

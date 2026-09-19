@@ -15,22 +15,27 @@ internal static class Storage
     static readonly Func<Container,long,bool> checkAccess=AccessTools.MethodDelegate<Func<Container,long,bool>>(AccessTools.Method(typeof(Container),"CheckAccess"));
     internal static void Register(Container c){if(c)all.Add(c);}
     internal static void Unregister(Container c)=>all.Remove(c);
-    internal static Container Find(string id)=>all.FirstOrDefault(c=>c && c.GetComponent<ZNetView>() && c.GetComponent<ZNetView>().IsValid() && Id(c)==id);
-    internal static string Id(Container c)=>c.GetComponent<ZNetView>().GetZDO().m_uid.ToString();
+    internal static ZNetView View(Container c)=>!c?null:c.m_rootObjectOverride?c.m_rootObjectOverride:c.GetComponent<ZNetView>();
+    internal static Container Find(string id)=>all.FirstOrDefault(c=>c && View(c) && View(c).IsValid() && Id(c)==id);
+    internal static string Id(Container c)=>View(c).GetZDO().m_uid.ToString();
+    internal static bool IsCart(Container c)=>c && (c.m_wagon || c.GetComponentInParent<Vagon>() || (View(c) && View(c).GetComponent<Vagon>()));
+    internal static bool Eligible(Container c)=>c && !ChestPrivacy.IsPrivate(c) &&
+        !c.GetComponentInParent<TombStone>() && !(View(c) && View(c).GetComponent<TombStone>()) &&
+        !c.GetComponentInParent<Incinerator>() && !c.GetComponentInParent<Ship>();
     internal static bool CanAccess(Container c)
     {
         var player=Player.m_localPlayer;
         if(!c || !player)return false;
-        var nv=c.GetComponent<ZNetView>();
-        return nv && nv.IsValid() && nv.HasOwner() && c.GetInventory()!=null &&
+        var nv=View(c);
+        return nv && nv.IsValid() && nv.HasOwner() && c.GetInventory()!=null && PileStorage.Ready(c) &&
             checkAccess(c,player.GetPlayerID()) && PrivateArea.CheckAccess(c.transform.position,0f,false,true);
     }
     internal static List<Container> Nearby(Container depot)
     {
         all.RemoveWhere(c=>!c);
-        if(!CanAccess(depot))return new List<Container>();
-        return all.Where(c=>c!=depot && !Plugin.IsDepot(c) && c.GetComponent<Piece>() &&
-            !c.GetComponentInParent<Incinerator>() && !c.GetComponentInParent<Ship>() && !c.GetComponentInParent<Vagon>() &&
+        // A private depot is a standalone chest, including while directly open.
+        if(!CanAccess(depot) || ChestPrivacy.IsPrivate(depot))return new List<Container>();
+        return all.Where(c=>c!=depot && Eligible(c) && !PileStorage.IsPile(c) &&
             Vector3.Distance(depot.transform.position,c.transform.position)<=Plugin.Radius.Value && CanAccess(c))
             .OrderBy(c=>Vector3.SqrMagnitude(c.transform.position-depot.transform.position)).ThenBy(Id,StringComparer.Ordinal).ToList();
     }
@@ -40,8 +45,7 @@ internal static class Storage
         var player=Player.m_localPlayer;
         if(!player)return new List<Container>();
         var network=WorkbenchReach.Connected(player.transform.position);
-        var direct=all.Where(c=>c.GetComponent<Piece>() && !c.IsInUse() &&
-            !c.GetComponentInParent<Incinerator>() && !c.GetComponentInParent<Ship>() && !c.GetComponentInParent<Vagon>() &&
+        var direct=all.Where(c=>Eligible(c) && !c.IsInUse() &&
             (Vector3.Distance(player.transform.position,c.transform.position)<=Plugin.Radius.Value || WorkbenchReach.Covers(network,c.transform.position)) && CanAccess(c)).ToList();
         return direct.Concat(direct.Where(Plugin.IsDepot).SelectMany(Nearby)).Where(c=>!c.IsInUse())
             .GroupBy(Id).Select(g=>g.First()).OrderBy(c=>Vector3.SqrMagnitude(c.transform.position-player.transform.position))
@@ -96,12 +100,12 @@ internal static class Storage
     }
     internal static Stack Item(ItemDrop.ItemData i,Inventory inv)=>new Stack(
         (i.m_gridPos.y*inv.GetWidth()+i.m_gridPos.x).ToString(CultureInfo.InvariantCulture),Key(i),
-        Localization.instance.Localize(i.m_shared.m_name),CategoryOf(i),i.m_stack,i.m_shared.m_maxStackSize,i.m_dropPrefab?i.m_dropPrefab.name:i.m_shared.m_name);
+        Localization.instance.Localize(i.m_shared.m_name),CategoryOf(i),i.m_stack,i.m_shared.m_maxStackSize,i.m_dropPrefab?i.m_dropPrefab.name:i.m_shared.m_name,!i.m_shared.m_teleportable);
     internal static Chest Snapshot(Container c,Container depot)
     {
         var inv=c.GetInventory();
         return new Chest(Id(c),inv.GetWidth()*inv.GetHeight(),Vector3.Distance(c.transform.position,depot.transform.position),CanAccess(c),
-            inv.GetAllItems().Where(i=>i.m_stack>0).Select(i=>Item(i,inv)));
+            inv.GetAllItems().Where(i=>i.m_stack>0).Select(i=>Item(i,inv)),ChestPrivacy.IsPrivate(c),IsCart(c));
     }
     internal static Vector2i Position(string slot,Inventory inventory)
     {int n=int.Parse(slot,CultureInfo.InvariantCulture);return new Vector2i(n%inventory.GetWidth(),n/inventory.GetWidth());}
@@ -121,13 +125,13 @@ internal sealed class DepotSorter:MonoBehaviour
     }
     internal void Request(Dictionary<int,string> slots)
     {
-        if(!view || !view.IsValid() || !view.HasOwner())return;
+        if(!view || !view.IsValid() || !view.HasOwner() || ChestPrivacy.IsPrivate(chest))return;
         var data=BlueDepot.Core.IntakeQueue.Encode(slots);
         if(view.IsOwner())Receive(0,data);else view.InvokeRPC(SortRpc,data);
     }
     void Receive(long sender,string data)
     {
-        if(!view.IsOwner())return;
+        if(!view.IsOwner() || ChestPrivacy.IsPrivate(chest))return;
         var queue=BlueDepot.Core.IntakeQueue.Decode(view.GetZDO().GetString(QueueKey,""));
         foreach(var pair in BlueDepot.Core.IntakeQueue.Decode(data))
         {
@@ -139,7 +143,7 @@ internal sealed class DepotSorter:MonoBehaviour
     void Update()
     {
         if(Time.time<next)return;next=Time.time+.25f;
-        if(!view || !view.IsValid() || !view.IsOwner() || Transfers.Busy || Crafting.Busy || !Storage.CanAccess(chest) || chest.IsInUse())return;
+        if(!view || !view.IsValid() || !view.IsOwner() || Transfers.Busy || Crafting.Busy || DepotUi.BulkRunning || !Storage.CanAccess(chest) || ChestPrivacy.IsPrivate(chest) || chest.IsInUse())return;
         if(Vector3.Distance(Player.m_localPlayer.transform.position,chest.transform.position)>Plugin.Radius.Value)return;
         var queue=BlueDepot.Core.IntakeQueue.Decode(view.GetZDO().GetString(QueueKey,""));
         if(queue.Count==0)return;

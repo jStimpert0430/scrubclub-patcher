@@ -31,7 +31,7 @@ public class GameContractTests
 
 public class SleepSafetyContracts
 {
-    [Fact] public void WakeupAndCombatHooksPreserveNativeEffectsAndExcludeToolAnimations()
+    [Fact] public void WakeupAndCombatHooksPreserveNativeEffectsAndIgnoreEnemyAwareness()
     {
         var dir=new DirectoryInfo(AppContext.BaseDirectory);
         while(dir!=null && !Directory.Exists(Path.Combine(dir.FullName,"src/SleepVote.Plugin")))dir=dir.Parent;
@@ -39,7 +39,12 @@ public class SleepSafetyContracts
         var main=plugin.MainModule.Types.Single(t=>t.Name=="Plugin");
         var localCombat=main.Methods.Single(m=>m.Name=="LocalCombat");
         Assert.DoesNotContain(localCombat.Body.Instructions,i=>i.Operand is MethodReference m && m.Name=="InAttack");
-        Assert.Contains(localCombat.Body.Instructions,i=>i.Operand is MethodReference m && m.Name=="IsSensed");
+        Assert.DoesNotContain(localCombat.Body.Instructions,i=>i.Operand is MethodReference m && (m.Name=="IsSensed" || m.Name=="IsTargeted"));
+        Assert.Contains(localCombat.Body.Instructions,i=>i.Operand is MethodReference m && m.DeclaringType.Name=="RecentCombat" && m.Name=="Active");
+        Assert.Contains(plugin.MainModule.Types,t=>t.Name=="TrackCombatSwing");
+        var bed=plugin.MainModule.Types.Single(t=>t.Name=="RecentCombatBedCheck").Methods.Single(m=>m.Name=="Prefix");
+        Assert.Contains(bed.Body.Instructions,i=>i.Operand is MethodReference m && m.Name=="LocalCombat");
+        Assert.DoesNotContain(bed.Body.Instructions,i=>i.Operand is MethodReference m && (m.Name=="IsSensed" || m.Name=="IsTargeted"));
         var wake=main.Methods.Single(m=>m.Name=="ReleaseWaitingBed");
         Assert.Contains(wake.Body.Instructions,i=>i.Operand is MethodReference m && m.Name=="InBed");
         Assert.Contains(wake.Body.Instructions,i=>i.Operand is MethodReference m && m.Name=="IsSleeping");

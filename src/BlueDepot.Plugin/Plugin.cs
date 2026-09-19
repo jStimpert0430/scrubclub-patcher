@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace BlueDepot;
 
-[BepInPlugin(Guid, "Blue Depot", "0.1.6")]
+[BepInPlugin(Guid, "Blue Depot", "0.1.7")]
 [BepInDependency(Jotunn.Main.ModGuid)]
 [BepInDependency("com.maxsch.valheim.MultiUserChest")]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.Patch)]
@@ -33,6 +33,7 @@ public sealed class Plugin : BaseUnityPlugin
         harmony=new Harmony(Guid);harmony.PatchAll();
         PrefabManager.OnVanillaPrefabsAvailable+=Register;
         gameObject.AddComponent<DepotUi>();
+        gameObject.AddComponent<ChestPrivacyUi>();
     }
     internal void LoggerForTransfers(System.Exception error)=>Logger.LogError(error);
     void OnDestroy(){PrefabManager.OnVanillaPrefabsAvailable-=Register;harmony?.UnpatchSelf();}
@@ -64,7 +65,8 @@ static class ChestAwake
     static void Postfix(Container __instance)
     {
         Storage.Register(__instance);
-        if(__instance.GetComponent<ZNetView>() && !__instance.GetComponent<StorageConsolidator>())__instance.gameObject.AddComponent<StorageConsolidator>();
+        if(Storage.View(__instance) && Storage.View(__instance).IsValid() && !__instance.GetComponent<ChestPrivacy>())__instance.gameObject.AddComponent<ChestPrivacy>();
+        if(Storage.View(__instance) && Storage.View(__instance).IsValid() && !__instance.GetComponent<StorageConsolidator>())__instance.gameObject.AddComponent<StorageConsolidator>();
         if(Plugin.IsDepot(__instance) && !__instance.GetComponent<DepotSorter>())__instance.gameObject.AddComponent<DepotSorter>();
     }
 }

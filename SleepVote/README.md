@@ -1,6 +1,6 @@
-# Sleep Vote 0.2.1
+# Sleep Vote 0.2.2 (local candidate)
 
-Version 0.2.1 is included in modpack 0.2.7. See [the audit](AUDIT.md) for findings, fixes and validation limits.
+Version 0.2.1 remains live in modpack 0.2.7. Version 0.2.2 is staged locally only. See [the audit](AUDIT.md) for findings, fixes and validation limits.
 
 Separate mod requiring BepInEx and Jotunn on the server and every client.
 Version 0.2.0 is included in modpack 0.2.6. Local mock previews and automated tests
@@ -50,8 +50,7 @@ An unaffected player may vote while another player fights.
 Affected players receive a top-left message naming the initiator: "PLAYER has initiated a sleep vote." Both their status panel and modal dialog
 are suppressed until combat ends. Local combat detection hides them immediately,
 without waiting for the next server update. Sleeping players see "Waiting for votes, player in
-combat" and the live participant list. Combat uses the game's enemy-awareness or
-targeting or actual attacker damage followed by eight quiet seconds. Tool animations alone do not count as combat. Clients report their own state over
+combat" and the live participant list. Combat lasts 20 seconds after the local player successfully starts an attack (including missed weapon swings; regular tool swings are excluded) or receives an attack from another character (including blocked/dodged incoming hit attempts). Axes and pickaxes count only when they hit another character; chopping, mining, hoeing and hammer use do not count. Nearby enemies, sensing and targeting do not extend it. Environmental damage does not count. The vanilla bed enemy check uses this same timer; roof, fire, wetness and time-of-day requirements are unchanged. Failed attack input does not start the timer. Clients report their own state over
 authenticated peer RPCs; missing/stale reports pause the ballot conservatively.
 This is cooperative client reporting, not an anti-cheat proof of combat state.
 
@@ -80,3 +79,7 @@ the overridden state. Close F5 after issuing a command to see the UI.
 Replace `votes` with `combat`, `bed`, or `overridden` to inspect either role in
 those states. `sleepvote_preview stop` closes the preview. Solo-local-world only;
 no network votes, time skipping, bed attachment or rested effects are generated.
+
+## 0.2.2 validation
+
+61 unit/contract tests pass, including exact 20-second expiry, refresh on a new attack, repeated polling without extension, disconnect reset, unchanged voting lifecycle, and current-game hook signatures. `sleepvote_status` now prints the local attack-window time remaining. Live combat/remote heartbeat timing and bed entry still need an in-world test. No client installation, server deployment, or patcher publication performed for this candidate.

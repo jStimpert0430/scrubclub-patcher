@@ -9,6 +9,41 @@ namespace BlueDepot.Tests;
 // This is a compile/ABI regression check, not a substitute for an in-game test.
 public class GameContractTests
 {
+    [Fact] public void NearbyDiscoveryChecksOriginPrivacyBeforeEnumeratingDestinations()
+    {
+        using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
+        var nearby=plugin.MainModule.Types.Single(t=>t.Name=="Storage").Methods.Single(m=>m.Name=="Nearby");
+        var calls=nearby.Body.Instructions.Where(i=>i.Operand is MethodReference).Select(i=>(MethodReference)i.Operand).ToList();
+        int privacy=calls.FindIndex(m=>m.DeclaringType.Name=="ChestPrivacy" && m.Name=="IsPrivate");
+        Assert.True(privacy>=0 && privacy<calls.FindIndex(m=>m.Name=="Where"));
+    }
+    [Fact] public void DiscoveryUsesNetworkRootsWithoutFilteringByBuilder()
+    {
+        using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
+        var storage=plugin.MainModule.Types.Single(t=>t.Name=="Storage");
+        var view=storage.Methods.Single(m=>m.Name=="View");
+        Assert.Contains(view.Body.Instructions,i=>i.Operand is FieldReference f && f.Name=="m_rootObjectOverride");
+        var methods=storage.Methods.Concat(storage.NestedTypes.SelectMany(t=>t.Methods)).Where(m=>m.HasBody);
+        Assert.DoesNotContain(methods.SelectMany(m=>m.Body.Instructions),i=>i.Operand is MethodReference m && m.Name=="GetCreator");
+    }
+    [Fact] public void AutomationTransfersRecheckPrivacyOnTheReceivingOwner()
+    {
+        using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
+        foreach(var name in new[]{"GuardAdd","GuardRemove","GuardMove"})
+        {
+            var prefix=plugin.MainModule.Types.Single(t=>t.Name==name).Methods.Single(m=>m.Name=="Prefix");
+            Assert.Contains(prefix.Body.Instructions,i=>i.Operand is MethodReference m && m.DeclaringType.Name=="TransferGuards" && m.Name=="Permitted");
+        }
+    }
+    [Fact] public void PrivateOptOutDoesNotPatchNativeChestAccess()
+    {
+        using var resolver=new DefaultAssemblyResolver();resolver.AddSearchDirectory(Path.Combine(Root(),".deps"));
+        using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"),new ReaderParameters{AssemblyResolver=resolver});
+        var privacy=plugin.MainModule.Types.Single(t=>t.Name=="ChestPrivacy");
+        Assert.DoesNotContain(privacy.Methods.Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions),i=>i.OpCode.Code==Mono.Cecil.Cil.Code.Stfld && i.Operand is FieldReference f && f.Name=="m_privacy");
+        Assert.DoesNotContain(plugin.MainModule.Types.SelectMany(t=>t.CustomAttributes).Where(a=>a.AttributeType.Name=="HarmonyPatch"),a=>a.ConstructorArguments.Any(v=>v.Value is string name && name=="CheckAccess"));
+    }
+
     [Fact] public void StationReachUsesVanillaHoverInsteadOfRootDistance()
     {
         using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/BlueDepot.Plugin/bin/Release/net472/BlueDepot.dll"));
@@ -54,7 +89,7 @@ public class GameContractTests
         using var valheim=AssemblyDefinition.ReadAssembly(Path.Combine(game,"assembly_valheim.dll"));
         var patchNames=new[]{"CraftRequirementScope","BuildRequirementScope","ChestIngredientCount","RequirementDisplayScope","CraftFromChests","PreventConcurrentCraft","BuildFromChests",
             "ResumeDeferredBuild","SupplyFireplace","SupplySmelterFuel","SupplySmelterInput","SupplyCookingFuel","SupplyCookingInput",
-            "DepotPlayerClick","DepotPlayerRelease","DepotSplitAccepted","DepotSplitCancelled","DepotOutsideDrop"};
+            "RegisterPileStorage","PileRefund","PileItemRestriction","DepotPlayerClick","DepotPlayerRelease","DepotSplitAccepted","DepotSplitCancelled","DepotOutsideDrop"};
         foreach(var name in patchNames)
         {
             var type=Assert.Single(plugin.MainModule.Types,t=>t.Name==name);
