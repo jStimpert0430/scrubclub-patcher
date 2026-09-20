@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net472</TargetFramework><AssemblyName>TofuFog</AssemblyName><Version>0.1.0</Version><Nullable>disable</Nullable><GameManaged Condition="'$(GameManaged)' == ''">/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed</GameManaged></PropertyGroup><ItemGroup>
+<ProjectReference Include="../TofuFog.Core/TofuFog.Core.csproj"/>
+<Reference Include="../../../.deps/BepInEx.dll"><Private>false</Private></Reference>
+<Reference Include="../../../.deps/0Harmony.dll"><Private>false</Private></Reference>
+<Reference Include="$(GameManaged)/assembly_*.dll"><Private>false</Private></Reference>
+<Reference Include="$(GameManaged)/UnityEngine*.dll"><Private>false</Private></Reference>
+</ItemGroup></Project>

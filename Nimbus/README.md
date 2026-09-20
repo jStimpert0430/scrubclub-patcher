@@ -1,8 +1,8 @@
-# Nimbus 0.1.1 — local prototype
+# Nimbus 0.1.2 — local prototype
 
 A small **white** cloud for one rider, built with the hammer near a forge:
 
-- 20 iron
+- 20 iron nails
 - 10 ancient bark
 - 10 feathers
 

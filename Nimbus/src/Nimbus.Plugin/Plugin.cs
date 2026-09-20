@@ -8,7 +8,7 @@ using Jotunn.Managers;
 using Jotunn.Utils;
 using UnityEngine;
 namespace Nimbus;
-[BepInPlugin(Guid,"Nimbus","0.1.1")]
+[BepInPlugin(Guid,"Nimbus","0.1.2")]
 [BepInDependency(Jotunn.Main.ModGuid)]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod,VersionStrictness.Patch)]
 public sealed class Plugin:BaseUnityPlugin
@@ -26,7 +26,7 @@ public sealed class Plugin:BaseUnityPlugin
     {
         PrefabManager.OnVanillaPrefabsAvailable-=Register;
         var config=new PieceConfig{Name="Nimbus",Description="A cargo cloud for one rider. Steer freely over land and water.",PieceTable="Hammer",Category="Misc",CraftingStation="forge"};
-        config.AddRequirement(new RequirementConfig("Iron",20,0,true));config.AddRequirement(new RequirementConfig("ElderBark",10,0,true));config.AddRequirement(new RequirementConfig("Feathers",10,0,true));
+        config.AddRequirement(new RequirementConfig("IronNails",20,0,true));config.AddRequirement(new RequirementConfig("ElderBark",10,0,true));config.AddRequirement(new RequirementConfig("Feathers",10,0,true));
         var piece=new CustomPiece(Prefab,"Karve",config);var go=piece.PiecePrefab;
         foreach(var r in go.GetComponentsInChildren<Renderer>(true))r.enabled=false;
         foreach(var a in go.GetComponentsInChildren<AudioSource>(true))a.enabled=false;
@@ -63,7 +63,7 @@ public sealed class Plugin:BaseUnityPlugin
         go.AddComponent<NimbusMotor>();
         go.AddComponent<CloudMist>();
         if(!PieceManager.Instance.AddPiece(piece))throw new InvalidOperationException("Nimbus registration failed");
-        Logger.LogInfo("Nimbus registered: white single-rider cloud, forge recipe; 20 iron, 10 ancient bark, 10 feathers.");
+        Logger.LogInfo("Nimbus registered: white single-rider cloud, forge recipe; 20 iron nails, 10 ancient bark, 10 feathers.");
     }
 }
 [HarmonyPatch(typeof(Ship),"CustomFixedUpdate")]

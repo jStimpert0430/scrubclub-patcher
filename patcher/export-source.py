@@ -25,7 +25,7 @@ for name in ['LICENSE', 'Directory.Build.props', 'dependencies.lock.json', '.git
     shutil.copy2(root / name, out / name)
 shutil.copy2(root / 'README.md', out / 'BLUE-DEPOT.md')
 # Export only explicitly selected standalone mods.
-for mod in ['RoadLights', 'SleepVote', 'MonkStyle', 'Nimbus', 'ScrubclubAchievements', 'Torchlight', 'TofuTools']:
+for mod in ['RoadLights', 'SleepVote', 'MonkStyle', 'Nimbus', 'ScrubclubAchievements', 'Torchlight', 'TofuTools', 'TofuFog']:
     road = root.parent / mod
     if not road.exists():
         road = root / mod
@@ -52,7 +52,7 @@ Windows players: download **ScrubclubPatcher-windows-x64.zip**, extract everythi
 
 Linux players: use **ScrubclubPatcher-linux-x64.tar.gz**, then run `./ScrubclubPatcher`. The ImGui interface and Launch game button work on both platforms. Native Linux x64 only.
 
-The patcher installs Blue Depot, Road Lights, Sleep Vote, MonkStyle, Nimbus, Scrubclub Achievements, Torchlight, TofuTools, the compatible MultiUserChest fork, Jötunn and BepInEx. Road Lights removes decorative-light fuel upkeep and station requirements, and adds optional free freestanding lights when using the hoe's Pathen tool. TofuTools prevents death from reducing earned skill levels while retaining partial-XP loss. Sleep Vote asks awake players to approve passing the night, with a 15-second grace period to get into bed after unanimous approval. Live vote status stays visible outside combat; combat pauses the countdown and suppresses panels and dialogs for affected players. Downloads come from GitHub over HTTPS and are signature-checked before installation. Existing configuration is preserved; replaced files are backed up. No home-network hosting service or server credentials are involved.
+The patcher installs Blue Depot, Road Lights, Sleep Vote, MonkStyle, Nimbus, Scrubclub Achievements, Torchlight, TofuTools, TofuFog, the compatible MultiUserChest fork, Jötunn and BepInEx. Road Lights removes decorative-light fuel upkeep and station requirements, and adds optional free freestanding lights when using the hoe's Pathen tool. TofuFog reduces fog to quarter strength, with Mistlands relief unlocked per character after obtaining a Wisplight; rain and snow particles remain unchanged. TofuTools prevents death from reducing earned skill levels while retaining partial-XP loss. Sleep Vote asks awake players to approve passing the night, with a 15-second grace period to get into bed after unanimous approval. Live vote status stays visible outside combat; combat pauses the countdown and suppresses panels and dialogs for affected players. Downloads come from GitHub over HTTPS and are signature-checked before installation. Existing configuration is preserved; replaced files are backed up. No home-network hosting service or server credentials are involved.
 
 This is an initial test release. Automated tests cover installation and failures; the Windows executable has been exercised under Wine, not yet on a real Windows PC. The patcher does not deploy mods to a game server. Test the mod in a local world before server rollout.
 

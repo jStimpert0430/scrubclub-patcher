@@ -23,7 +23,7 @@ public class Probe:BaseUnityPlugin
             prefab.FixReferences(false); // Same resource resolution used at world-entry registration.
             var source=PrefabManager.Instance.GetPrefab("Karve");var piece=prefab.GetComponent<Piece>();var ship=prefab.GetComponent<Ship>();
             Require(piece.m_resources.Length==3,"Recipe mismatch");
-            foreach(var expected in new[]{("Iron",20),("ElderBark",10),("Feathers",10)})Require(piece.m_resources.Any(r=>r.m_resItem && r.m_resItem.name==expected.Item1 && r.m_amount==expected.Item2),"Recipe resource missing "+expected.Item1);
+            foreach(var expected in new[]{("IronNails",20),("ElderBark",10),("Feathers",10)})Require(piece.m_resources.Any(r=>r.m_resItem && r.m_resItem.name==expected.Item1 && r.m_amount==expected.Item2),"Recipe resource missing "+expected.Item1);
             Require(piece.m_craftingStation && piece.m_craftingStation.name=="forge","Missing forge gate");
             Require(!piece.m_waterPiece,"Still water-only placement");
             var cargo=prefab.GetComponentsInChildren<Container>(true);
