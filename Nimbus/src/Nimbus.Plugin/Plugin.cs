@@ -8,7 +8,7 @@ using Jotunn.Managers;
 using Jotunn.Utils;
 using UnityEngine;
 namespace Nimbus;
-[BepInPlugin(Guid,"Nimbus","0.1.0")]
+[BepInPlugin(Guid,"Nimbus","0.1.1")]
 [BepInDependency(Jotunn.Main.ModGuid)]
 [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod,VersionStrictness.Patch)]
 public sealed class Plugin:BaseUnityPlugin
@@ -61,6 +61,7 @@ public sealed class Plugin:BaseUnityPlugin
         int playerLayers=LayerMask.GetMask("character","character_net");
         deck.includeLayers=playerLayers;deck.excludeLayers=~playerLayers;deck.layerOverridePriority=10;
         go.AddComponent<NimbusMotor>();
+        go.AddComponent<CloudMist>();
         if(!PieceManager.Instance.AddPiece(piece))throw new InvalidOperationException("Nimbus registration failed");
         Logger.LogInfo("Nimbus registered: white single-rider cloud, forge recipe; 20 iron, 10 ancient bark, 10 feathers.");
     }

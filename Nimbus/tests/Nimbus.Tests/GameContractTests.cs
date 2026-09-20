@@ -44,12 +44,13 @@ public class GameContractTests
         var prefix=plugin.MainModule.Types.Single(t=>t.Name=="HoverPhysics").Methods.Single(m=>m.Name=="Prefix");
         Assert.DoesNotContain(prefix.Body.Instructions,i=>i.Operand is MethodReference m && m.Name=="Step");
     }
-    [Fact] public void MotorHasNoWindDependencyAndValidatesInputOwner()
+    [Fact] public void MotorUsesBonusOnlyWindRulesAndValidatesInputOwner()
     {
         using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(Root(),"src/Nimbus.Plugin/bin/Release/net472/Nimbus.dll"));
         var motor=plugin.MainModule.Types.Single(t=>t.Name=="NimbusMotor");
         var calls=motor.Methods.Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Select(i=>i.Operand).OfType<MethodReference>().ToArray();
-        Assert.DoesNotContain(calls,m=>m.Name.Contains("Wind") || m.DeclaringType.Name=="EnvMan");
+        Assert.Contains(calls,m=>m.DeclaringType.Name=="TailwindRules" && m.Name=="Multiplier");
+        Assert.DoesNotContain(calls,m=>m.Name=="GetSailForce" || m.Name=="GetWindAngleFactor");
         var receive=motor.Methods.Single(m=>m.Name=="ReceiveInput").Body.Instructions.Select(i=>i.Operand).OfType<MethodReference>().ToArray();
         foreach(var name in new[]{"IsOwner","GetUser","HaveValidUser","GetOwner","IsDead"})Assert.Contains(receive,m=>m.Name==name);
         Assert.Contains(calls,m=>m.Name=="FreshInput");

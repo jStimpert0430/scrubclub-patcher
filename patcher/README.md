@@ -11,7 +11,7 @@ A Dear ImGui launcher and signed updater for the Steam edition of Valheim on Win
 
 Run the same patcher again before playing whenever the server owner announces a mod update. It checks the current signed release and installs changed files. It does not run in the background, update Steam itself, or download mods during a server connection.
 
-Bundle 0.2.9 contains Blue Depot 0.1.7, Sleep Vote 0.2.2, Road Lights 0.2.0, MonkStyle 0.1.0, Nimbus 0.1.0, Scrubclub Achievements 0.1.0, Torchlight 0.1.0, MultiUserChest 0.6.2, Jötunn 2.30.0, BepInExPack 5.4.2350, and the client-only character helper. Players should update before joining the matching server.
+Bundle 0.2.10 contains Blue Depot 0.1.7, Sleep Vote 0.2.2, Road Lights 0.2.0, MonkStyle 0.1.0, Nimbus 0.1.1, Scrubclub Achievements 0.1.0, Torchlight 0.1.0, MultiUserChest 0.6.2, Jötunn 2.30.0, BepInExPack 5.4.2350, and the client-only character helper. Players should update before joining the matching server.
 
 On Linux, extract `ScrubclubPatcher-linux-x64.tar.gz` and run `./ScrubclubPatcher`. The Launch game button uses the BepInEx wrapper automatically. This payload targets native Linux Valheim, not the Windows game running in Proton. OpenGL 3.3-capable drivers and a graphical desktop are required for the ImGui window.
 

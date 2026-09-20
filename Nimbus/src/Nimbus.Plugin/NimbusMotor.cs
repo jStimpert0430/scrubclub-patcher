@@ -294,6 +294,11 @@ internal sealed class NimbusMotor:MonoBehaviour
         if(supported)
         {
             Vector3 desired=intent;
+            if(waterHighest && !Climbing && EnvMan.instance)
+            {
+                var wind=EnvMan.instance.GetWindDir();
+                desired*=TailwindRules.Multiplier(true,active,intent.x,intent.z,wind.x,wind.z,EnvMan.instance.GetWindIntensity());
+            }
             // Match the player's ground motion: speed is measured along the
             // slope, not horizontally (which would multiply uphill speed).
             if(Climbing)

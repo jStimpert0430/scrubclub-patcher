@@ -1,4 +1,4 @@
-# Nimbus 0.1.0 — local prototype
+# Nimbus 0.1.1 — local prototype
 
 A small **white** cloud for one rider, built with the hammer near a forge:
 
@@ -27,6 +27,9 @@ The motor uses a spring-damped hover target 0.7 m above the supporting surface (
 - The hull uses low-friction contact and slope-dependent normal clearance to reduce catches while climbing or descending. The rider deck has separate collision filtering so it cannot snag scenery.
 - Tilt, clearance and lift changes are rate-limited; hover/climb transitions blend, with gentler visual banking and turning. The top deck forwards both mount and cargo interaction to the normal controller.
 - Terrain collision impulses no longer cancel forward momentum while driving; solid obstacles still block movement, and normal braking is preserved.
+- On water, wind blowing along the requested direction of travel grants a 1.25x speed bonus: 6.25 m/s normal, 9.375 m/s sprint. Headwinds, crosswinds, calm, land and idle keep normal speed; sprint stamina use is unchanged. Nimbus moves the steering controls beside the wind indicator; ordinary boats retain their usual HUD.
+- Soft white mist swirls around the cloud origin and rises gently around its edges. This cosmetic effect adds no light, flame, damage or smoke-obstruction behavior.
+- Moving clouds leave a short world-space trail using the same white mist texture and larger puffs. Trail puffs vary upward from the previous maximum size (1.7–2.55), spawn randomly within ±0.65 m across the body, and stay vertically centered at emission. New puffs stop while idle; existing puffs drift slightly upward and fade within 1.1–1.6 seconds. Teleports clear the trail.
 - Unoccupied clouds brake and stop receiving propulsion.
 
 No altitude controls, teleportation, terrain changes or free flight are added. Nimbus is not Ashlands-ready. The iron-stage recipe deliberately keeps it in the Swamp progression tier.
