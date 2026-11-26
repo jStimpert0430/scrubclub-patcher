@@ -33,7 +33,7 @@ for platform in ['windows', 'linux']:
             if include:
                 write(platform, name, z.read(info))
     with zipfile.ZipFile(root / '.tools/downloads/jotunn.zip') as z:
-        write(platform, 'BepInEx/plugins/Jotunn/Jotunn.dll', z.read('plugins/Jotunn.dll'))
+        write(platform, 'BepInEx/plugins/Jotunn/Jotunn.dll', z.read(next(n for n in z.namelist() if n.replace('\\', '/') == 'plugins/Jotunn.dll')))
     for name in ['BlueDepot.dll', 'BlueDepot.Core.dll']:
         write(platform, 'BepInEx/plugins/BlueDepot/' + name, (root / 'src/BlueDepot.Plugin/bin/Release/net472' / name).read_bytes())
     write(platform, 'BepInEx/plugins/MultiUserChest/MultiUserChest.dll', (root / 'vendor/MultiUserChest/bin/Release/net472/MultiUserChest.dll').read_bytes())

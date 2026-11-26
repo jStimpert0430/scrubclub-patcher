@@ -1,17 +1,17 @@
-Scrubclub mod bundle 0.2.0
+Scrubclub mod bundle 0.2.13
 
-Blue Depot 0.1.2: MIT, source included in this release repository.
+Blue Depot 0.1.7: MIT, source included in this release repository.
 Scrubclub Launcher and its character selection helper 0.2.0: MIT, source in patcher/.
 ChestButler: MIT, design/source adaptations; attribution in ChestButler-MIT.txt.
 https://github.com/EladKarni/ChestButler (see dependencies.lock.json for source revision)
 MultiUserChest: MIT; our Valheim compatibility fork 0.6.2, source in vendor/MultiUserChest.
-Jotunn 2.30.0: MIT, https://github.com/Valheim-Modding/Jotunn
-BepInEx 5.x in BepInExPack_Valheim 5.4.2350: MIT (v5-lts branch).
+Jotunn 2.30.2: MIT, https://github.com/Valheim-Modding/Jotunn
+BepInEx 5.x in BepInExPack_Valheim 5.4.2360: MIT (v5-lts branch).
 https://github.com/BepInEx/BepInEx/tree/v5-lts
 HarmonyX: MIT, https://github.com/BepInEx/HarmonyX
 Mono.Cecil: MIT, https://github.com/jbevain/cecil
 MonoMod: MIT, https://github.com/MonoMod/MonoMod
-UnityDoorstop 4.4.0: LGPL-2.1, https://github.com/NeighTools/UnityDoorstop/tree/v4.4.0
+UnityDoorstop 4.6.0: LGPL-2.1, https://github.com/NeighTools/UnityDoorstop/tree/v4.6.0
 Doorstop is provided unmodified as replaceable winhttp.dll / libdoorstop_x64.so.
 The corresponding source archive is distributed alongside the release assets.
 

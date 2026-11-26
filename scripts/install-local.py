@@ -18,7 +18,7 @@ for archive,folder in [('jotunn','Jotunn'),('muc','MultiUserChest')]:
     for name in z.namelist():
         if name.endswith(('.dll','.bundle')) or 'assetbundle' in name.lower() and not name.endswith('/'):
             # Jotunn embeds its required assets; preserve any distributed companion bundle.
-            files['BepInEx/plugins/'+folder+'/'+Path(name).name]=z.read(name)
+            files['BepInEx/plugins/'+folder+'/'+Path(name.replace('\\', '/')).name]=z.read(name)
 files['BepInEx/plugins/MultiUserChest/MultiUserChest.dll']=(root/'vendor/MultiUserChest/bin/Release/net472/MultiUserChest.dll').read_bytes()
 for name in ['BlueDepot.dll','BlueDepot.Core.dll']:
     files['BepInEx/plugins/BlueDepot/'+name]=(root/'src/BlueDepot.Plugin/bin/Release/net472'/name).read_bytes()

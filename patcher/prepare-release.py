@@ -54,11 +54,11 @@ for platform, rid in [('windows', 'win-x64'), ('linux', 'linux-x64')]:
         with tarfile.open(out / 'ScrubclubPatcher-linux-x64.tar.gz', 'w:gz') as tar:
             for path, name in entries:
                 tar.add(path, name, recursive=False)
-source = root / '.tools/downloads/UnityDoorstop-4.4.0-source.zip'
+source = root / '.tools/downloads/UnityDoorstop-4.6.0-source.zip'
 if not source.exists():
-    with urllib.request.urlopen('https://codeload.github.com/NeighTools/UnityDoorstop/zip/refs/tags/v4.4.0', timeout=60) as response:
+    with urllib.request.urlopen('https://codeload.github.com/NeighTools/UnityDoorstop/zip/refs/tags/v4.6.0', timeout=60) as response:
         source.write_bytes(response.read())
-if hashlib.sha256(source.read_bytes()).hexdigest() != 'f982a2dc2c7fa50f35013051b82268b0bc9fcd73786f5f0b4c664a0e5381b1e9':
+if hashlib.sha256(source.read_bytes()).hexdigest() != '95a3d62f5cb2fc792f1dfc61e6b09f78e685e0966401e6f9e6fa58540249e0ea':
     raise SystemExit('Doorstop source checksum mismatch')
 shutil.copy2(source, out / source.name)
 (out / 'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in sorted(out.iterdir()) if p.is_file()))

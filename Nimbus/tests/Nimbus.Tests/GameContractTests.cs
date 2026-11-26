@@ -14,7 +14,7 @@ public class GameContractTests
     }
     [Fact] public void ControlHookMatchesInstalledGame()
     {
-        using var game=AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var game=AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         var method=game.MainModule.Types.Single(t=>t.Name=="ShipControlls").Methods.Single(m=>m.Name=="ApplyControlls");
         Assert.Contains(method.Parameters,p=>p.Name=="moveDir" && p.ParameterType.Name=="Vector3");
         Assert.Contains(method.Parameters,p=>p.Name=="lookDir" && p.ParameterType.Name=="Vector3");
@@ -22,7 +22,7 @@ public class GameContractTests
     }
     [Fact] public void MountHooksMatchGameAndBypassBoatVolumeRequirementOnlyForNimbus()
     {
-        using var game=AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var game=AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         var controls=game.MainModule.Types.Single(t=>t.Name=="ShipControlls");
         var request=controls.Methods.Single(m=>m.Name=="RPC_RequestControl");
         Assert.Equal(new[]{"sender","playerID"},request.Parameters.Select(p=>p.Name));

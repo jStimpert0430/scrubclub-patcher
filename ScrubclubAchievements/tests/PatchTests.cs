@@ -34,7 +34,7 @@ public class PatchTests
     }
     [Fact] public void CurrentValheimGateMatchesAndRetainsNativeRestrictions()
     {
-        using var assembly=AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var assembly=AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         var type=assembly.MainModule.Types.Single(t=>t.Name=="Achievements");var method=type.Methods.Single(m=>m.Name=="IsCheatedAtAll");
         var il=method.Body.Instructions;
         Assert.Single(il,i=>i.OpCode.Code==Mono.Cecil.Cil.Code.Ldsfld && i.Operand is FieldReference f && f.DeclaringType.Name=="Game" && f.Name=="isModded");

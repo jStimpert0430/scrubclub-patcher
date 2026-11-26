@@ -14,6 +14,6 @@ for name,owner,short in [('BepInExPack_Valheim','denikson','bep'),('Jotunn','Val
     if hashlib.sha256(archive.read_bytes()).hexdigest()!=pin['sha256']:raise SystemExit('Checksum mismatch: '+name)
     with zipfile.ZipFile(archive) as z:
         for entry in z.namelist():
-            if Path(entry).name in ('BepInEx.dll','0Harmony.dll','Jotunn.dll','Mono.Cecil.dll'):
-                (deps/Path(entry).name).write_bytes(z.read(entry))
+            if Path(entry.replace('\\', '/')).name in ('BepInEx.dll','0Harmony.dll','Jotunn.dll','Mono.Cecil.dll'):
+                (deps/Path(entry.replace('\\', '/')).name).write_bytes(z.read(entry))
 print('Pinned dependencies verified. MultiUserChest must be built from vendor source.')

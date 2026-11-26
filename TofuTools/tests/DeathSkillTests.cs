@@ -144,7 +144,7 @@ public class DeathSkillTests
     }
     [Fact] public void InstalledGameHasExpectedDeathGatesAndSkillStorage()
     {
-        using var game = AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var game = AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         var player = game.MainModule.Types.Single(t => t.Name == "Player");
         var calls = player.Methods.Single(m => m.Name == "OnDeath").Body.Instructions.Select(i => i.Operand).OfType<MethodReference>().ToArray();
         Assert.Single(calls, m => m.DeclaringType.Name == "Skills" && m.Name == "OnDeath");

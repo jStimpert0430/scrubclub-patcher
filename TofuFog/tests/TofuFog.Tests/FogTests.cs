@@ -57,7 +57,7 @@ public class FogTests
     }
     [Fact] public void NativeKnownItemHistoryIncludesObtainedEquipmentAndIsPersisted()
     {
-        using var game = AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var game = AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         var player = game.MainModule.Types.Single(t => t.Name == "Player");
         Assert.Single(player.Methods, m => m.Name == "IsMaterialKnown" && m.IsPublic && m.Parameters.Count == 1);
         foreach (string name in new[] { "AddKnownItem", "Save", "Load" })
@@ -65,7 +65,7 @@ public class FogTests
     }
     [Fact] public void NativeHooksStillWriteFreshFogAndUseParticleStartColors()
     {
-        using var game = AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var game = AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         var env = game.MainModule.Types.Single(t => t.Name == "EnvMan");
         var method = env.Methods.Single(m => m.Name == "SetEnv");
         var il = method.Body.Instructions;

@@ -31,7 +31,7 @@ public class GameContractTests
     }
     [Fact] public void NativeTreeAndAttackHooksStillExist()
     {
-        using var a=AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var a=AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         foreach(var name in new[]{"TreeBase","TreeLog","Destructible"})
             Assert.Contains(a.MainModule.Types.Single(t=>t.Name==name).Methods,m=>m.Name=="Damage"&&m.Parameters.Count==1&&m.Parameters[0].ParameterType.Name=="HitData");
         var attack=a.MainModule.Types.Single(t=>t.Name=="Attack");

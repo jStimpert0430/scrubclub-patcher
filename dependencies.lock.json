@@ -6,12 +6,12 @@
   },
   "packages": {
     "BepInExPack_Valheim": {
-      "version": "5.4.2350",
-      "sha256": "37a91c000b4e88f2ed7a4bd7d812239852d2e36cbf0ff0a9f5faacfba46b105f"
+      "version": "5.4.2360",
+      "sha256": "6bca77b1016acfe0ffaebb6534c84b12ae8d12e5a96abbf59ec6e4526204fc6f"
     },
     "Jotunn": {
-      "version": "2.30.0",
-      "sha256": "f7f218ac3f97b27a7e65d62b5ebe7c29b93129bf3e56cf41b6870bef1ef161fd"
+      "version": "2.30.2",
+      "sha256": "8aae92da2be0eb6820cd4cf57e2f6c1d6ad0d738d4915966e7c3d7a94e9a9b0f"
     },
     "MultiUserChest": {
       "version": "0.6.1",

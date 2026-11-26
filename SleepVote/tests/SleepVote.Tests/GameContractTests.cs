@@ -8,7 +8,7 @@ public class GameContractTests
 {
     [Fact] public void HarmonyHooksMatchInstalledGame()
     {
-        using var game=AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var game=AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         var dir=new DirectoryInfo(AppContext.BaseDirectory);
         while(dir!=null && !Directory.Exists(Path.Combine(dir.FullName,"src/SleepVote.Plugin")))dir=dir.Parent;
         using var plugin=AssemblyDefinition.ReadAssembly(Path.Combine(dir!.FullName,"src/SleepVote.Plugin/bin/Release/net472/SleepVote.dll"));

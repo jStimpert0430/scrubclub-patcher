@@ -9,7 +9,7 @@ public class GameContractTests
 {
     [Fact] public void GameStillUsesPlayerDistanceAndLightCutoff()
     {
-        using var a=AssemblyDefinition.ReadAssembly("/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed/assembly_valheim.dll");
+        using var a=AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.Environment.GetEnvironmentVariable("GameManaged") ?? "/home/bunta/.local/share/Steam/steamapps/common/Valheim/valheim_Data/Managed", "assembly_valheim.dll"));
         var t=a.MainModule.Types.Single(t=>t.Name=="LightLod");
         Assert.Single(t.Methods,m=>m.Name=="Awake");
         Assert.Contains(t.Fields,f=>f.Name=="m_lightDistance" && f.FieldType.FullName=="System.Single" && f.IsPublic);
